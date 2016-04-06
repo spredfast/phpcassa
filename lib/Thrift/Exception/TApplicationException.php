@@ -22,16 +22,10 @@
 
 namespace Thrift\Exception;
 
-use Thrift\Exception\TException;
 use Thrift\Type\TType;
 
-class TApplicationException extends TException {
-  static $_TSPEC =
-    array(1 => array('var' => 'message',
-                     'type' => TType::STRING),
-          2 => array('var' => 'code',
-                     'type' => TType::I32));
-
+class TApplicationException extends TException
+{
   const UNKNOWN = 0;
   const UNKNOWN_METHOD = 1;
   const INVALID_MESSAGE_TYPE = 2;
@@ -40,16 +34,27 @@ class TApplicationException extends TException {
   const MISSING_RESULT = 5;
   const INTERNAL_ERROR = 6;
   const PROTOCOL_ERROR = 7;
+  const INVALID_TRANSFORM = 8;
+  const INVALID_PROTOCOL = 9;
+  const UNSUPPORTED_CLIENT_TYPE = 10;
+  static $_TSPEC =
+      array(1 => array('var' => 'message',
+          'type' => TType::STRING),
+          2 => array('var' => 'code',
+              'type' => TType::I32));
 
-  function __construct($message=null, $code=0) {
+  public function __construct($message = null, $code = 0)
+  {
     parent::__construct($message, $code);
   }
 
-  public function read($output) {
+  public function read($output)
+  {
     return $this->_read('TApplicationException', self::$_TSPEC, $output);
   }
 
-  public function write($output) {
+  public function write($output)
+  {
     $xfer = 0;
     $xfer += $output->writeStructBegin('TApplicationException');
     if ($message = $this->getMessage()) {
@@ -64,6 +69,7 @@ class TApplicationException extends TException {
     }
     $xfer += $output->writeFieldStop();
     $xfer += $output->writeStructEnd();
+
     return $xfer;
   }
 }

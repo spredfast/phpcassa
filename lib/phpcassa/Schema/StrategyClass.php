@@ -6,7 +6,8 @@ namespace phpcassa\Schema;
  *
  * @package phpcassa\Schema
  */
-class StrategyClass {
+class StrategyClass
+{
 
     /** Ignores node DCs and racks. */
     const SIMPLE_STRATEGY = "SimpleStrategy";

@@ -1,7 +1,6 @@
 <?php
 namespace phpcassa\Schema\DataType;
 
-use phpcassa\Schema\DataType\Serialized;
 use phpcassa\ColumnFamily;
 
 /**
@@ -12,14 +11,16 @@ use phpcassa\ColumnFamily;
 class CompositeType extends CassandraType implements Serialized
 {
     /**
-     * @param phpcassa\Schema\DataType\CassandraType[] $inner_types an array
+     * @param CassandraType[] $inner_types an array
      *        of other CassandraType instances.
      */
-    public function __construct($inner_types) {
+    public function __construct($inner_types)
+    {
         $this->inner_types = $inner_types;
     }
 
-    public function pack($value, $is_name=true, $slice_end=null, $is_data=false) {
+    public function pack($value, $is_name = true, $slice_end = null, $is_data = false)
+    {
         if ($is_name && $is_data)
             $value = unserialize($value);
 
@@ -52,18 +53,19 @@ class CompositeType extends CassandraType implements Serialized
             $type = $this->inner_types[$i];
             $packed = $type->pack($item, false);
             $len = strlen($packed);
-            $res .= pack("C2", $len&0xFF00, $len&0xFF).$packed.pack("C1", $eoc);
+            $res .= pack("C2", $len & 0xFF00, $len & 0xFF) . $packed . pack("C1", $eoc);
         }
 
         return $res;
     }
 
-    public function unpack($data, $is_name=true) {
+    public function unpack($data, $is_name = true)
+    {
         $component_idx = 0;
         $components = array();
         while (empty($data) !== true) {
             $bytes = unpack("Chi/Clow", substr($data, 0, 2));
-            $len = $bytes["hi"]*256 + $bytes["low"];
+            $len = $bytes["hi"] * 256 + $bytes["low"];
             $component_data = substr($data, 2, $len);
 
             $type = $this->inner_types[$component_idx];
@@ -81,7 +83,8 @@ class CompositeType extends CassandraType implements Serialized
         }
     }
 
-    public function __toString() {
+    public function __toString()
+    {
         $inner_strs = array();
         foreach ($inner_types as $inner_type) {
             $inner_strs[] = (string)$inner_type;

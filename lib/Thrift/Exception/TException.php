@@ -22,8 +22,8 @@
 
 namespace Thrift\Exception;
 
-use Thrift\Type\TType;
 use Thrift\Base\TBase;
+use Thrift\Type\TType;
 
 /**
  * NOTE(mcslee): This currently contains a ton of duplicated code from TBase
@@ -38,8 +38,18 @@ use Thrift\Base\TBase;
  * @param mixed $p1 Message (string) or type-spec (array)
  * @param mixed $p2 Code (integer) or values (array)
  */
-class TException extends \Exception {
-  function __construct($p1=null, $p2=0) {
+class TException extends \Exception
+{
+  static $tmethod = array(TType::BOOL => 'Bool',
+      TType::BYTE => 'Byte',
+      TType::I16 => 'I16',
+      TType::I32 => 'I32',
+      TType::I64 => 'I64',
+      TType::DOUBLE => 'Double',
+      TType::STRING => 'String');
+
+  public function __construct($p1 = null, $p2 = 0)
+  {
     if (is_array($p1) && is_array($p2)) {
       $spec = $p1;
       $vals = $p2;
@@ -54,15 +64,59 @@ class TException extends \Exception {
     }
   }
 
-  static $tmethod = array(TType::BOOL   => 'Bool',
-                          TType::BYTE   => 'Byte',
-                          TType::I16    => 'I16',
-                          TType::I32    => 'I32',
-                          TType::I64    => 'I64',
-                          TType::DOUBLE => 'Double',
-                          TType::STRING => 'String');
+  protected function _read($class, $spec, $input)
+  {
+    $xfer = 0;
+    $fname = null;
+    $ftype = 0;
+    $fid = 0;
+    $xfer += $input->readStructBegin($fname);
+    while (true) {
+      $xfer += $input->readFieldBegin($fname, $ftype, $fid);
+      if ($ftype == TType::STOP) {
+        break;
+      }
+      if (isset($spec[$fid])) {
+        $fspec = $spec[$fid];
+        $var = $fspec['var'];
+        if ($ftype == $fspec['type']) {
+          $xfer = 0;
+          if (isset(TBase::$tmethod[$ftype])) {
+            $func = 'read' . TBase::$tmethod[$ftype];
+            $xfer += $input->$func($this->$var);
+          } else {
+            switch ($ftype) {
+              case TType::STRUCT:
+                $class = $fspec['class'];
+                $this->$var = new $class();
+                $xfer += $this->$var->read($input);
+                break;
+              case TType::MAP:
+                $xfer += $this->_readMap($this->$var, $fspec, $input);
+                break;
+              case TType::LST:
+                $xfer += $this->_readList($this->$var, $fspec, $input, false);
+                break;
+              case TType::SET:
+                $xfer += $this->_readList($this->$var, $fspec, $input, true);
+                break;
+            }
+          }
+        } else {
+          $xfer += $input->skip($ftype);
+        }
+      } else {
+        $xfer += $input->skip($ftype);
+      }
+      $xfer += $input->readFieldEnd();
+    }
+    $xfer += $input->readStructEnd();
 
-  private function _readMap(&$var, $spec, $input) {
+    return $xfer;
+  }
+
+  private function _readMap(&$var, $spec, $input)
+  {
     $xfer = 0;
     $ktype = $spec['ktype'];
     $vtype = $spec['vtype'];
@@ -125,10 +179,12 @@ class TException extends \Exception {
       $var[$key] = $val;
     }
     $xfer += $input->readMapEnd();
+
     return $xfer;
   }
 
-  private function _readList(&$var, $spec, $input, $set=false) {
+  private function _readList(&$var, $spec, $input, $set = false)
+  {
     $xfer = 0;
     $etype = $spec['etype'];
     $eread = $vread = null;
@@ -178,59 +234,49 @@ class TException extends \Exception {
     } else {
       $xfer += $input->readListEnd();
     }
+
     return $xfer;
   }
 
-  protected function _read($class, $spec, $input) {
+  protected function _write($class, $spec, $output)
+  {
     $xfer = 0;
-    $fname = null;
-    $ftype = 0;
-    $fid = 0;
-    $xfer += $input->readStructBegin($fname);
-    while (true) {
-      $xfer += $input->readFieldBegin($fname, $ftype, $fid);
-      if ($ftype == TType::STOP) {
-        break;
-      }
-      if (isset($spec[$fid])) {
-        $fspec = $spec[$fid];
-        $var = $fspec['var'];
-        if ($ftype == $fspec['type']) {
-          $xfer = 0;
-          if (isset(TBase::$tmethod[$ftype])) {
-            $func = 'read'.TBase::$tmethod[$ftype];
-            $xfer += $input->$func($this->$var);
-          } else {
-            switch ($ftype) {
+    $xfer += $output->writeStructBegin($class);
+    foreach ($spec as $fid => $fspec) {
+      $var = $fspec['var'];
+      if ($this->$var !== null) {
+        $ftype = $fspec['type'];
+        $xfer += $output->writeFieldBegin($var, $ftype, $fid);
+        if (isset(TBase::$tmethod[$ftype])) {
+          $func = 'write' . TBase::$tmethod[$ftype];
+          $xfer += $output->$func($this->$var);
+        } else {
+          switch ($ftype) {
             case TType::STRUCT:
-              $class = $fspec['class'];
-              $this->$var = new $class();
-              $xfer += $this->$var->read($input);
+              $xfer += $this->$var->write($output);
               break;
             case TType::MAP:
-              $xfer += $this->_readMap($this->$var, $fspec, $input);
+              $xfer += $this->_writeMap($this->$var, $fspec, $output);
               break;
             case TType::LST:
-              $xfer += $this->_readList($this->$var, $fspec, $input, false);
+              $xfer += $this->_writeList($this->$var, $fspec, $output, false);
               break;
             case TType::SET:
-              $xfer += $this->_readList($this->$var, $fspec, $input, true);
+              $xfer += $this->_writeList($this->$var, $fspec, $output, true);
               break;
-            }
           }
-        } else {
-          $xfer += $input->skip($ftype);
         }
-      } else {
-        $xfer += $input->skip($ftype);
+        $xfer += $output->writeFieldEnd();
       }
-      $xfer += $input->readFieldEnd();
     }
-    $xfer += $input->readStructEnd();
+    $xfer += $output->writeFieldStop();
+    $xfer += $output->writeStructEnd();
+
     return $xfer;
   }
 
-  private function _writeMap($var, $spec, $output) {
+  private function _writeMap($var, $spec, $output)
+  {
     $xfer = 0;
     $ktype = $spec['ktype'];
     $vtype = $spec['vtype'];
@@ -285,10 +331,12 @@ class TException extends \Exception {
       }
     }
     $xfer += $output->writeMapEnd();
+
     return $xfer;
   }
 
-  private function _writeList($var, $spec, $output, $set=false) {
+  private function _writeList($var, $spec, $output, $set = false)
+  {
     $xfer = 0;
     $etype = $spec['etype'];
     $ewrite = null;
@@ -328,41 +376,7 @@ class TException extends \Exception {
     } else {
       $xfer += $output->writeListEnd();
     }
-    return $xfer;
-  }
 
-  protected function _write($class, $spec, $output) {
-    $xfer = 0;
-    $xfer += $output->writeStructBegin($class);
-    foreach ($spec as $fid => $fspec) {
-      $var = $fspec['var'];
-      if ($this->$var !== null) {
-        $ftype = $fspec['type'];
-        $xfer += $output->writeFieldBegin($var, $ftype, $fid);
-        if (isset(TBase::$tmethod[$ftype])) {
-          $func = 'write'.TBase::$tmethod[$ftype];
-          $xfer += $output->$func($this->$var);
-        } else {
-          switch ($ftype) {
-          case TType::STRUCT:
-            $xfer += $this->$var->write($output);
-            break;
-          case TType::MAP:
-            $xfer += $this->_writeMap($this->$var, $fspec, $output);
-            break;
-          case TType::LST:
-            $xfer += $this->_writeList($this->$var, $fspec, $output, false);
-            break;
-          case TType::SET:
-            $xfer += $this->_writeList($this->$var, $fspec, $output, true);
-            break;
-          }
-        }
-        $xfer += $output->writeFieldEnd();
-      }
-    }
-    $xfer += $output->writeFieldStop();
-    $xfer += $output->writeStructEnd();
     return $xfer;
   }
 

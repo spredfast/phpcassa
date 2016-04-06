@@ -6,7 +6,8 @@ use phpcassa\ColumnFamily;
 /**
  * @package phpcassa/Iterator
  */
-class ColumnFamilyIterator implements \Iterator {
+class ColumnFamilyIterator implements \Iterator
+{
 
     protected $column_family;
     protected $buffer_size;
@@ -25,7 +26,8 @@ class ColumnFamilyIterator implements \Iterator {
                                    $orig_start_key,
                                    $column_parent,
                                    $predicate,
-                                   $read_consistency_level) {
+                                   $read_consistency_level)
+    {
 
         $this->column_family = $column_family;
         $this->buffer_size = $buffer_size;
@@ -43,7 +45,8 @@ class ColumnFamilyIterator implements \Iterator {
         $this->buffer_number = 0;
     }
 
-    public function rewind() {
+    public function rewind()
+    {
         // Setup first buffer
         $this->rows_seen = 0;
         $this->is_valid = true;
@@ -63,19 +66,8 @@ class ColumnFamilyIterator implements \Iterator {
             $this->rows_seen++;
     }
 
-    public function current() {
-        return current($this->current_buffer);
-    }
-
-    public function key() {
-        return key($this->current_buffer);
-    }
-
-    public function valid() {
-        return $this->is_valid;
-    }
-
-    public function next() {
+    public function next()
+    {
         if ($this->rows_seen === $this->row_count) {
             $this->is_valid = false;
             return;
@@ -83,8 +75,7 @@ class ColumnFamilyIterator implements \Iterator {
 
         $beyond_last_row = false;
         # If we haven't run off the end
-        if ($this->current_buffer != null)
-        {
+        if ($this->current_buffer != null) {
             # Save this key in case we run off the end
             if ($this->array_format) {
                 $cur = current($this->current_buffer);
@@ -94,47 +85,38 @@ class ColumnFamilyIterator implements \Iterator {
             }
             next($this->current_buffer);
 
-            if (count(current($this->current_buffer)) == 0)
-            {
+            if (count(current($this->current_buffer)) == 0) {
                 # this is an empty row, skip it
                 do {
-	            	$this->next_start_key = key($this->current_buffer);
-	            	next($this->current_buffer);
-            		$key = key($this->current_buffer);
-            		if ( !isset($key) ) {
-            			$beyond_last_row = true;
-            			break;
-            		}
-            	} while (count(current($this->current_buffer)) == 0);
-            }
-            else
-            {
-	            $key = key($this->current_buffer);
-	            $beyond_last_row = !isset($key);
+                    $this->next_start_key = key($this->current_buffer);
+                    next($this->current_buffer);
+                    $key = key($this->current_buffer);
+                    if (!isset($key)) {
+                        $beyond_last_row = true;
+                        break;
+                    }
+                } while (count(current($this->current_buffer)) == 0);
+            } else {
+                $key = key($this->current_buffer);
+                $beyond_last_row = !isset($key);
             }
 
-            if (!$beyond_last_row)
-            {
+            if (!$beyond_last_row) {
                 $this->rows_seen++;
                 if ($this->row_count !== null && ($this->rows_seen > $this->row_count)) {
                     $this->is_valid = false;
                     return;
                 }
             }
-        }
-        else
-        {
+        } else {
             $beyond_last_row = true;
         }
 
-        if($beyond_last_row && $this->current_page_size < $this->expected_page_size)
-        {
+        if ($beyond_last_row && $this->current_page_size < $this->expected_page_size) {
             # The page was shorter than we expected, so we know that this
             # was the last page in the column family
             $this->is_valid = false;
-        }
-        else if($beyond_last_row)
-        {
+        } else if ($beyond_last_row) {
             # We've reached the end of this page, but there should be more
             # in the CF
 
@@ -142,18 +124,15 @@ class ColumnFamilyIterator implements \Iterator {
             # we loop through multiple calls of get_buffer() in case the entire
             # buffer load is tombstones, the old method of just calling next() could
             # result in excessive recursion
-            while ( $this->is_valid ) {
+            while ($this->is_valid) {
                 $this->get_buffer();
 
                 # If the result set is 1, we can stop because the first item
                 # should always be skipped if we're not on the first buffer
-                if(count($this->current_buffer) == 1 && $this->buffer_number != 1)
-                {
+                if (count($this->current_buffer) == 1 && $this->buffer_number != 1) {
                     $this->is_valid = false;
                     break;
-                }
-                else
-                {
+                } else {
                     // skip leading tombstone rows
                     $need_new_buffer = false;
                     $skipped_a_row = false;
@@ -164,8 +143,8 @@ class ColumnFamilyIterator implements \Iterator {
                         next($this->current_buffer);
                         $key = key($this->current_buffer);
 
-                        if ( !isset($key) ) {
-                            if ( $this->current_page_size < $this->expected_page_size ) {
+                        if (!isset($key)) {
+                            if ($this->current_page_size < $this->expected_page_size) {
                                 // looks like we're at the last page of data so just give up
                                 $this->is_valid = false;
                             } else {
@@ -176,7 +155,7 @@ class ColumnFamilyIterator implements \Iterator {
                         }
                     }
 
-                    if ( !$need_new_buffer ) {
+                    if (!$need_new_buffer) {
                         if (!$skipped_a_row) {
                             // The first row in the new buffer needs to be skipped
                             $this->next();
@@ -196,5 +175,20 @@ class ColumnFamilyIterator implements \Iterator {
                 }
             }
         }
+    }
+
+    public function current()
+    {
+        return current($this->current_buffer);
+    }
+
+    public function key()
+    {
+        return key($this->current_buffer);
+    }
+
+    public function valid()
+    {
+        return $this->is_valid;
     }
 }

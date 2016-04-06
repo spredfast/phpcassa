@@ -1,18 +1,19 @@
 <?php
-require_once(__DIR__.'/SubBase.php');
+require_once(__DIR__ . '/SubBase.php');
 
 use phpcassa\Connection\ConnectionPool;
-use phpcassa\SuperColumnFamily;
 use phpcassa\Schema\DataType;
+use phpcassa\SuperColumnFamily;
 use phpcassa\SystemManager;
-
 use phpcassa\UUID;
 
-class AutopackSerializedSubColumnsTest extends SubBase {
+class AutopackSerializedSubColumnsTest extends SubBase
+{
 
     protected $SERIALIZED = true;
 
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         parent::setUpBeforeClass();
 
         $sys = new SystemManager();
@@ -34,18 +35,19 @@ class AutopackSerializedSubColumnsTest extends SubBase {
         $sys->create_column_family(self::$KS, 'SuperLongSubComposite', $cfattrs);
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->client = new ConnectionPool(self::$KS);
 
-        $this->cf_suplong_subfloat     = new SuperColumnFamily($this->client, 'SuperLongSubFloat');
-        $this->cf_suplong_subdouble    = new SuperColumnFamily($this->client, 'SuperLongSubDouble');
-        $this->cf_suplong_subtime      = new SuperColumnFamily($this->client, 'SuperLongSubTime');
-        $this->cf_suplong_sublex       = new SuperColumnFamily($this->client, 'SuperLongSubLex');
+        $this->cf_suplong_subfloat = new SuperColumnFamily($this->client, 'SuperLongSubFloat');
+        $this->cf_suplong_subdouble = new SuperColumnFamily($this->client, 'SuperLongSubDouble');
+        $this->cf_suplong_subtime = new SuperColumnFamily($this->client, 'SuperLongSubTime');
+        $this->cf_suplong_sublex = new SuperColumnFamily($this->client, 'SuperLongSubLex');
         $this->cf_suplong_subcomposite = new SuperColumnFamily($this->client, 'SuperLongSubComposite');
 
         $this->cfs = array($this->cf_suplong_subfloat, $this->cf_suplong_subdouble,
-                           $this->cf_suplong_subtime, $this->cf_suplong_sublex,
-                           $this->cf_suplong_subcomposite);
+            $this->cf_suplong_subtime, $this->cf_suplong_sublex,
+            $this->cf_suplong_subcomposite);
 
         $this->TIME1 = UUID::mint();
         $this->TIME2 = UUID::mint();
@@ -56,7 +58,8 @@ class AutopackSerializedSubColumnsTest extends SubBase {
         $this->LEX3 = UUID::import('cccccccccccccccccccccccccccccccc');
     }
 
-    public function make_type_groups() {
+    public function make_type_groups()
+    {
         $type_groups = array();
 
         $float_cols = array(1.25, 1.5, 1.75);

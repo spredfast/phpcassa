@@ -25,25 +25,63 @@ class DataType
 
     public static $class_map;
 
-    public static function init() {
+    public static function init()
+    {
         self::$class_map = array(
-            'BytesType'       => 'phpcassa\Schema\DataType\BytesType',
-            'AsciiType'       => 'phpcassa\Schema\DataType\AsciiType',
-            'UTF8Type'        => 'phpcassa\Schema\DataType\UTF8Type',
-            'LongType'        => 'phpcassa\Schema\DataType\LongType',
-            'IntegerType'     => 'phpcassa\Schema\DataType\IntegerType',
-            'FloatType'       => 'phpcassa\Schema\DataType\FloatType',
-            'DoubleType'      => 'phpcassa\Schema\DataType\DoubleType',
-            'TimeUUIDType'    => 'phpcassa\Schema\DataType\TimeUUIDType',
+            'BytesType' => 'phpcassa\Schema\DataType\BytesType',
+            'AsciiType' => 'phpcassa\Schema\DataType\AsciiType',
+            'UTF8Type' => 'phpcassa\Schema\DataType\UTF8Type',
+            'LongType' => 'phpcassa\Schema\DataType\LongType',
+            'IntegerType' => 'phpcassa\Schema\DataType\IntegerType',
+            'FloatType' => 'phpcassa\Schema\DataType\FloatType',
+            'DoubleType' => 'phpcassa\Schema\DataType\DoubleType',
+            'TimeUUIDType' => 'phpcassa\Schema\DataType\TimeUUIDType',
             'LexicalUUIDType' => 'phpcassa\Schema\DataType\LexicalUUIDType',
-            'UUIDType'        => 'phpcassa\Schema\DataType\UUIDType',
-            'BooleanType'     => 'phpcassa\Schema\DataType\BooleanType',
-            'DateType'        => 'phpcassa\Schema\DataType\DateType',
-            'Int32Type'        => 'phpcassa\Schema\DataType\Int32Type',
+            'UUIDType' => 'phpcassa\Schema\DataType\UUIDType',
+            'BooleanType' => 'phpcassa\Schema\DataType\BooleanType',
+            'DateType' => 'phpcassa\Schema\DataType\DateType',
+            'Int32Type' => 'phpcassa\Schema\DataType\Int32Type',
         );
     }
 
-    protected static function extract_type_name($typestr) {
+    protected static function get_inner_types($typestr)
+    {
+        $inner = self::get_inner_type($typestr);
+        $inner_typestrs = explode(',', $inner);
+        $inner_types = array();
+
+        foreach ($inner_typestrs as $inner_type) {
+            $inner_types[] = self::get_type_for(trim($inner_type));
+        }
+        return $inner_types;
+    }
+
+    /** Given a typestr like "Reversed(AsciiType)", returns "AsciiType".
+     * @param $typestr
+     * @return string
+     */
+    protected static function get_inner_type($typestr)
+    {
+        $paren_index = strpos($typestr, '(');
+        $end = strlen($typestr) - $paren_index;
+        return substr($typestr, $paren_index + 1, $end - 2);
+    }
+
+    public static function get_type_for($typestr)
+    {
+        if (strpos($typestr, 'CompositeType') !== false) {
+            return new CompositeType(self::get_inner_types($typestr));
+        } else if (strpos($typestr, 'ReversedType') !== false) {
+            return self::get_type_for(self::get_inner_type($typestr));
+        } else {
+            $type_name = self::extract_type_name($typestr);
+            $type_class = self::$class_map[$type_name];
+            return new $type_class;
+        }
+    }
+
+    protected static function extract_type_name($typestr)
+    {
         if ($typestr == null or $typestr == '')
             return 'BytesType';
 
@@ -56,36 +94,6 @@ class DataType
             return 'BytesType';
 
         return $type;
-    }
-
-    /** Given a typestr like "Reversed(AsciiType)", returns "AsciiType". */
-    protected static function get_inner_type($typestr) {
-        $paren_index = strpos($typestr, '(');
-        $end = strlen($typestr) - $paren_index;
-        return substr($typestr, $paren_index + 1, $end - 2);
-    }
-
-    protected static function get_inner_types($typestr) {
-        $inner = self::get_inner_type($typestr);
-        $inner_typestrs = explode(',', $inner);
-        $inner_types = array();
-
-        foreach ($inner_typestrs as $inner_type) {
-            $inner_types[] = self::get_type_for(trim($inner_type));
-        }
-        return $inner_types;
-    }
-
-    public static function get_type_for($typestr) {
-        if (strpos($typestr, 'CompositeType') !== false) {
-            return new CompositeType(self::get_inner_types($typestr));
-        } else if (strpos($typestr, 'ReversedType') !== false) {
-            return self::get_type_for(self::get_inner_type($typestr));
-        } else {
-            $type_name = self::extract_type_name($typestr);
-            $type_class = self::$class_map[$type_name];
-            return new $type_class;
-        }
     }
 }
 

@@ -1,21 +1,20 @@
 <?php
 
 use phpcassa\Connection\ConnectionPool;
-use phpcassa\SystemManager;
-use phpcassa\SuperColumnFamily;
 use phpcassa\Schema\DataType;
+use phpcassa\SuperColumnFamily;
+use phpcassa\SystemManager;
 
-use cassandra\NotFoundException;
+class TestSuperCounterColumnFamily extends PHPUnit_Framework_TestCase
+{
 
-class TestSuperCounterColumnFamily extends PHPUnit_Framework_TestCase {
-
+    private static $KS = "TestSuperCounterColumnFamily";
     private $pool;
     private $cf;
     private $sys;
 
-    private static $KS = "TestSuperCounterColumnFamily";
-
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         try {
             $sys = new SystemManager();
 
@@ -32,28 +31,32 @@ class TestSuperCounterColumnFamily extends PHPUnit_Framework_TestCase {
                 $cfattrs["default_validation_class"] = "CounterColumnType";
                 $sys->create_column_family(self::$KS, 'SuperCounter1', $cfattrs);
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             print($e);
             throw $e;
         }
     }
 
-    public static function tearDownAfterClass() {
+    public static function tearDownAfterClass()
+    {
         $sys = new SystemManager();
         $sys->drop_keyspace(self::$KS);
         $sys->close();
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->pool = new ConnectionPool(self::$KS);
         $this->cf = new SuperColumnFamily($this->pool, 'SuperCounter1');
     }
 
-    public function tearDown() {
+    public function tearDown()
+    {
         $this->pool->dispose();
     }
 
-    public function test_add() {
+    public function test_add()
+    {
         $key = "test_add";
         $this->cf->add($key, "supercol", "col");
         $result = $this->cf->get($key, null, array("supercol"));
@@ -70,13 +73,14 @@ class TestSuperCounterColumnFamily extends PHPUnit_Framework_TestCase {
         $this->assertEquals($result, array("col" => 3, "col2" => 5));
     }
 
-    public function test_remove_counter() {
+    public function test_remove_counter()
+    {
         $key = "test_remove_counter";
         $this->cf->add($key, "supercol", "col1");
         $this->cf->add($key, "supercol", "col2", 1);
         $result = $this->cf->get($key, null, array("supercol"));
         $this->assertEquals($result, array("supercol" => array("col1" => 1,
-                                                             "col2" => 1)));
+            "col2" => 1)));
 
         $this->cf->remove_counter($key, "supercol", "col1");
         $result = $this->cf->get($key, null, array("supercol"));

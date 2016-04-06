@@ -1,4 +1,6 @@
 <?php
 namespace phpcassa\Schema\DataType;
 
-interface Serialized {}
+interface Serialized
+{
+}

@@ -1,30 +1,34 @@
 <?php
 
-use phpcassa\SystemManager;
-use phpcassa\Schema\StrategyClass;
-use phpcassa\Schema\DataType;
-
-use cassandra\InvalidRequestException;
 use cassandra\IndexType;
+use cassandra\InvalidRequestException;
+use phpcassa\Schema\DataType;
+use phpcassa\Schema\StrategyClass;
+use phpcassa\SystemManager;
 
-class SystemManagerTest extends PHPUnit_Framework_TestCase {
+class SystemManagerTest extends PHPUnit_Framework_TestCase
+{
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->sys = new SystemManager();
     }
 
-    public function tearDown() {
+    public function tearDown()
+    {
         $this->sys->close();
     }
 
-    public function test_basic() {
+    public function test_basic()
+    {
         $this->sys->describe_cluster_name();
         $this->sys->describe_schema_versions();
         $this->sys->describe_partitioner();
         $this->sys->describe_snitch();
     }
 
-    public function test_keyspace_manipulation() {
+    public function test_keyspace_manipulation()
+    {
         $ksname = "PhpcassaKeyspace";
         try {
             $this->sys->drop_keyspace($ksname);
@@ -50,17 +54,8 @@ class SystemManagerTest extends PHPUnit_Framework_TestCase {
         $this->sys->drop_keyspace($ksname);
     }
 
-    private function get_cfdef($ksname, $cfname) {
-        $ksdef = $this->sys->describe_keyspace($ksname);
-        $cfdefs = $ksdef->cf_defs;
-        foreach($cfdefs as $cfdef) {
-            if ($cfdef->name == $cfname)
-                return $cfdef;
-        }
-        return;
-    }
-
-    public function test_cf_manipulation() {
+    public function test_cf_manipulation()
+    {
         $ksname = "PhpcassaKeyspace";
         $attrs = array();
         $attrs["strategy_class"] = StrategyClass::SIMPLE_STRATEGY;
@@ -102,5 +97,16 @@ class SystemManagerTest extends PHPUnit_Framework_TestCase {
         $this->sys->drop_column_family($ksname, $cfname);
 
         $this->sys->drop_keyspace($ksname);
+    }
+
+    private function get_cfdef($ksname, $cfname)
+    {
+        $ksdef = $this->sys->describe_keyspace($ksname);
+        $cfdefs = $ksdef->cf_defs;
+        foreach ($cfdefs as $cfdef) {
+            if ($cfdef->name == $cfname)
+                return $cfdef;
+        }
+        return null;
     }
 }

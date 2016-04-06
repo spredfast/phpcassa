@@ -9,13 +9,15 @@ use phpcassa\Schema\DataType\Serialized;
  *
  * @package phpcassa\Iterator
  */
-class IndexedColumnFamilyIterator extends ColumnFamilyIterator {
+class IndexedColumnFamilyIterator extends ColumnFamilyIterator
+{
 
     private $index_clause;
 
     public function __construct($column_family, $index_clause, $buffer_size,
                                 $column_parent, $predicate,
-                                $read_consistency_level) {
+                                $read_consistency_level)
+    {
 
         $this->index_clause = $index_clause;
 
@@ -23,14 +25,15 @@ class IndexedColumnFamilyIterator extends ColumnFamilyIterator {
         $orig_start_key = $index_clause->start_key;
 
         parent::__construct($column_family, $buffer_size, $row_count,
-                            $orig_start_key, $column_parent, $predicate,
-                            $read_consistency_level);
+            $orig_start_key, $column_parent, $predicate,
+            $read_consistency_level);
     }
 
-    protected function get_buffer() {
+    protected function get_buffer()
+    {
         # Figure out how many rows we need to get and record that
         $buff_sz = $this->buffer_size;
-        if($this->row_count !== null) {
+        if ($this->row_count !== null) {
             if ($this->buffer_number == 0 && $this->row_count <= $buff_sz) {
                 // we don't need to chunk, grab exactly the right number of rows
                 $buff_sz = $this->row_count;
@@ -56,8 +59,8 @@ class IndexedColumnFamilyIterator extends ColumnFamilyIterator {
         }
         $this->index_clause->start_key = $this->column_family->pack_key($this->next_start_key, $handle_serialize);
         $resp = $this->column_family->pool->call("get_indexed_slices",
-                $this->column_parent, $this->index_clause, $this->predicate,
-                $this->read_consistency_level);
+            $this->column_parent, $this->index_clause, $this->predicate,
+            $this->read_consistency_level);
 
         $this->current_buffer = $this->column_family->keyslices_to_array($resp);
         $this->current_page_size = count($this->current_buffer);

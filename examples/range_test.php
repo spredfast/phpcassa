@@ -52,11 +52,11 @@
  * set a[9][id] = 9;
  *
  */
- 
-require_once(__DIR__.'/../lib/autoload.php');
 
-use phpcassa\Connection\ConnectionPool;
+require_once(__DIR__ . '/lib/autoload.php');
+
 use phpcassa\ColumnFamily;
+use phpcassa\Connection\ConnectionPool;
 
 /*
  * Instead to do some crazy token calculation,

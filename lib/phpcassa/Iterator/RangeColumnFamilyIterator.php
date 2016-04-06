@@ -1,8 +1,8 @@
 <?php
 namespace phpcassa\Iterator;
 
-use phpcassa\Schema\DataType\Serialized;
 use cassandra\KeyRange;
+use phpcassa\Schema\DataType\Serialized;
 
 /**
  * Iterates over a column family row-by-row, typically with only a subset
@@ -10,7 +10,8 @@ use cassandra\KeyRange;
  *
  * @package phpcassa\Iterator
  */
-class RangeColumnFamilyIterator extends ColumnFamilyIterator {
+class RangeColumnFamilyIterator extends ColumnFamilyIterator
+{
 
     private $key_start;
     private $key_finish;
@@ -18,20 +19,22 @@ class RangeColumnFamilyIterator extends ColumnFamilyIterator {
     public function __construct($column_family, $buffer_size,
                                 $key_start, $key_finish, $row_count,
                                 $column_parent, $predicate,
-                                $read_consistency_level) {
+                                $read_consistency_level)
+    {
 
         // The key_start will be packed during the first get_buffer call
         $this->key_start = $key_start;
         $this->key_finish = $column_family->pack_key($key_finish);
 
         parent::__construct($column_family, $buffer_size, $row_count,
-                            $key_start, $column_parent, $predicate,
-                            $read_consistency_level);
+            $key_start, $column_parent, $predicate,
+            $read_consistency_level);
     }
 
-    protected function get_buffer() {
+    protected function get_buffer()
+    {
         $buff_sz = $this->buffer_size;
-        if($this->row_count !== null) {
+        if ($this->row_count !== null) {
             if ($this->buffer_number == 0 && $this->row_count <= $buff_sz) {
                 // we don't need to chunk, grab exactly the right number of rows
                 $buff_sz = $this->row_count;

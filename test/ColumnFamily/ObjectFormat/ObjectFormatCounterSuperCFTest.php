@@ -2,9 +2,10 @@
 
 use phpcassa\UUID;
 
-require_once(__DIR__.'/ObjectFormatSuperCFTest.php');
+require_once(__DIR__ . '/ObjectFormatSuperCFTest.php');
 
-class ObjectFormatCounterSuperCFTest extends ObjectFormatSuperCFTest {
+class ObjectFormatCounterSuperCFTest extends ObjectFormatSuperCFTest
+{
 
     protected static $CF = "SuperCounter1";
 
@@ -14,9 +15,10 @@ class ObjectFormatCounterSuperCFTest extends ObjectFormatSuperCFTest {
         "default_validation_class" => "CounterColumnType"
     );
 
-    public function setUp() {
+    public function setUp()
+    {
         parent::setUp();
         $this->subcols = array(array(UUID::uuid1(), 'val1'),
-                               array(UUID::uuid1(), 'val2'));
+            array(UUID::uuid1(), 'val2'));
     }
 }

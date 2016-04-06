@@ -2,17 +2,16 @@
 
 namespace Thrift\Server;
 
-use Thrift\Server\TServerTransport;
-use Thrift\Factory\TTransportFactory;
 use Thrift\Factory\TProtocolFactory;
+use Thrift\Factory\TTransportFactory;
 
 /**
  * Generic class for a Thrift server.
  *
  * @package thrift.server
  */
-abstract class TServer {
-
+abstract class TServer
+{
   /**
    * Processor to handle new clients
    *

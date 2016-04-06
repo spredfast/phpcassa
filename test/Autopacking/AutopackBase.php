@@ -1,24 +1,32 @@
 <?php
 
 use phpcassa\Connection\ConnectionPool;
-use phpcassa\ColumnFamily;
 use phpcassa\Schema\DataType;
 use phpcassa\SystemManager;
 
-abstract class AutopackBase extends PHPUnit_Framework_TestCase {
-
-    protected $SERIALIZED = false;
+abstract class AutopackBase extends PHPUnit_Framework_TestCase
+{
 
     public static $have64Bit;
-
     protected static $VALS = array('val1', 'val2', 'val3');
     protected static $KEYS = array('key1', 'key2', 'key3');
     protected static $KS = "TestAutopacking";
-
+    protected $SERIALIZED = false;
+    /**
+     * @var ConnectionPool
+     */
     protected $client;
+    /**
+     * @var \phpcassa\ColumnFamily
+     */
     protected $cf;
+    /**
+     * @var \phpcassa\ColumnFamily[]
+     */
+    protected $cfs;
 
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         $sys = new SystemManager();
 
         $ksdefs = $sys->describe_keyspaces();
@@ -32,17 +40,21 @@ abstract class AutopackBase extends PHPUnit_Framework_TestCase {
         $sys->create_keyspace(self::$KS, array());
     }
 
-    public static function tearDownAfterClass() {
+    public static function tearDownAfterClass()
+    {
         $sys = new SystemManager();
         $sys->drop_keyspace(self::$KS);
         $sys->close();
     }
 
-    public function setUp() {}
+    public function setUp()
+    {
+    }
 
-    public function tearDown() {
-        foreach($this->cfs as $cf) {
-            foreach(self::$KEYS as $key)
+    public function tearDown()
+    {
+        foreach ($this->cfs as $cf) {
+            foreach (self::$KEYS as $key)
                 $cf->remove($key);
         }
     }

@@ -1,19 +1,28 @@
 <?php
-require_once(__DIR__.'/AutopackBase.php');
+require_once(__DIR__ . '/AutopackBase.php');
 
-use phpcassa\Connection\ConnectionPool;
 use phpcassa\ColumnFamily;
+use phpcassa\Connection\ConnectionPool;
 use phpcassa\Index\IndexClause;
 use phpcassa\Index\IndexExpression;
 use phpcassa\Schema\DataType;
 use phpcassa\SystemManager;
-use phpcassa\UUID\UUIDException;
-
 use phpcassa\UUID;
 
-class AutopackKeysTest extends AutopackBase {
+class AutopackKeysTest extends AutopackBase
+{
 
-    public static function setUpBeforeClass() {
+    /**
+     * @var \phpcassa\ColumnFamily
+     */
+    private $uuid_cf;
+    /**
+     * @var \phpcassa\ColumnFamily
+     */
+    private $composite_cf;
+
+    public static function setUpBeforeClass()
+    {
         parent::setUpBeforeClass();
         $sys = new SystemManager();
 
@@ -39,49 +48,57 @@ class AutopackKeysTest extends AutopackBase {
 
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->client = new ConnectionPool(self::$KS);
         $this->cf = new ColumnFamily($this->client, 'LongKeys');
         $this->uuid_cf = new ColumnFamily($this->client, 'UUIDKeys');
         $this->composite_cf = new ColumnFamily($this->client, 'CompositeKeys');
     }
 
-    public function tearDown() {
+    public function tearDown()
+    {
         $this->client->close();
     }
 
-    public function test_get() {
+    public function test_get()
+    {
         $this->cf->insert(123, array("foo" => "bar"));
-        $this->assertEquals(array("foo" => "bar"), $this->cf->get(123));
+        $result = $this->cf->get(123);
+        $this->assertEquals(array("foo" => "bar"), $result);
     }
 
-    public function test_get_serialized() {
+    public function test_get_serialized()
+    {
         $uuid = UUID::uuid1();
         $this->uuid_cf->insert($uuid, array("foo" => "bar"));
         $this->assertEquals(array("foo" => "bar"), $this->uuid_cf->get($uuid));
     }
 
-    public function test_multiget() {
+    public function test_multiget()
+    {
         $this->cf->insert(1, array("a" => "a"));
         $this->cf->insert(2, array("b" => "b"));
         $res = $this->cf->multiget(array(1, 2));
         $this->assertEquals(array(1 => array("a" => "a"),
-                                  2 => array("b" => "b")),
-                            $res);
+            2 => array("b" => "b")),
+            $res);
     }
 
-    public function test_multiget_serialized() {
+    public function test_multiget_serialized()
+    {
         $uuid1 = UUID::uuid1();
         $uuid2 = UUID::uuid1();
         $this->uuid_cf->insert($uuid1, array("a" => "a"));
         $this->uuid_cf->insert($uuid2, array("b" => "b"));
         $res = $this->uuid_cf->multiget(array($uuid1, $uuid2));
         $this->assertEquals(array(serialize($uuid1) => array("a" => "a"),
-                                  serialize($uuid2) => array("b" => "b")),
-                            $res);
+            serialize($uuid2) => array("b" => "b")),
+            $res);
     }
 
-    public function test_remove() {
+    public function test_remove()
+    {
         $this->cf->insert(123, array("foo" => "bar"));
         $this->assertEquals(array("foo" => "bar"), $this->cf->get(123));
         $this->cf->remove(123);
@@ -89,7 +106,8 @@ class AutopackKeysTest extends AutopackBase {
         $this->cf->get(123);
     }
 
-    public function test_remove_serialized() {
+    public function test_remove_serialized()
+    {
         $uuid = UUID::uuid1();
         $this->uuid_cf->insert($uuid, array("foo" => "bar"));
         $this->assertEquals(array("foo" => "bar"), $this->uuid_cf->get($uuid));
@@ -98,20 +116,8 @@ class AutopackKeysTest extends AutopackBase {
         $this->uuid_cf->get($uuid);
     }
 
-    protected static function endswith($haystack, $needle) {
-        $start  = strlen($needle) * -1; //negative
-        return (substr($haystack, $start) === $needle);
-    }
-
-    protected function require_opp() {
-        $partitioner = $this->client->call('describe_partitioner');
-        if ($this->endswith($partitioner, "RandomPartitioner") ||
-            $this->endswith($partitioner, "Murmur3Partitioner")) {
-            $this->markTestSkipped();
-        }
-    }
-
-    public function test_get_range() {
+    public function test_get_range()
+    {
         $this->require_opp();
         $this->cf->truncate();
         $this->cf->insert(0, array("a" => "a"));
@@ -119,8 +125,8 @@ class AutopackKeysTest extends AutopackBase {
         $this->cf->insert(2, array("c" => "c"));
 
         $expected = array(0 => array("a" => "a"),
-                          1 => array("b" => "b"),
-                          2 => array("c" => "c"));
+            1 => array("b" => "b"),
+            2 => array("c" => "c"));
 
         $this->cf->buffer_size = 2;
         $res = iterator_to_array($this->cf->get_range());
@@ -135,7 +141,24 @@ class AutopackKeysTest extends AutopackBase {
         $this->assertEquals($expected, $res);
     }
 
-    public function test_get_range_serialized() {
+    protected function require_opp()
+    {
+        $partitioner = $this->client->call('describe_partitioner');
+        if ($this->endswith($partitioner, "RandomPartitioner") ||
+            $this->endswith($partitioner, "Murmur3Partitioner")
+        ) {
+            $this->markTestSkipped();
+        }
+    }
+
+    protected static function endswith($haystack, $needle)
+    {
+        $start = strlen($needle) * -1; //negative
+        return (substr($haystack, $start) === $needle);
+    }
+
+    public function test_get_range_serialized()
+    {
         $this->require_opp();
         $this->uuid_cf->truncate();
         $uuid1 = UUID::uuid1();
@@ -146,8 +169,8 @@ class AutopackKeysTest extends AutopackBase {
         $this->uuid_cf->insert($uuid3, array("c" => "c"));
 
         $expected = array(serialize($uuid1) => array("a" => "a"),
-                          serialize($uuid2) => array("b" => "b"),
-                          serialize($uuid3) => array("c" => "c"));
+            serialize($uuid2) => array("b" => "b"),
+            serialize($uuid3) => array("c" => "c"));
 
         $this->uuid_cf->buffer_size = 2;
         $res = iterator_to_array($this->uuid_cf->get_range());
@@ -162,7 +185,8 @@ class AutopackKeysTest extends AutopackBase {
         $this->assertEquals($expected, $res);
     }
 
-    public function test_get_range_composite_key() {
+    public function test_get_range_composite_key()
+    {
         $this->composite_cf->insert_format = ColumnFamily::ARRAY_FORMAT;
         $this->composite_cf->return_format = ColumnFamily::ARRAY_FORMAT;
 
@@ -179,7 +203,6 @@ class AutopackKeysTest extends AutopackBase {
         $rowcount = 0;
         $rows = $this->composite_cf->get_range("", "", 2147483647);
         foreach ($rows as $row) {
-            $key = $row[0];
             $rowcount++;
             if ($rowcount > 110) {
                 throw new Exception("avoiding an infinite loop, this should " .
@@ -189,7 +212,8 @@ class AutopackKeysTest extends AutopackBase {
         $this->assertEquals(100, $rowcount);
     }
 
-    public function test_get_indexed_slices() {
+    public function test_get_indexed_slices()
+    {
         $this->require_opp();
         $this->cf->truncate();
         $this->cf->insert(0, array("subcol" => 0));
@@ -199,8 +223,8 @@ class AutopackKeysTest extends AutopackBase {
 
         $this->cf->buffer_size = 2;
         $expected = array(1 => array("subcol" => 1),
-                          2 => array("subcol" => 1),
-                          3 => array("subcol" => 1));
+            2 => array("subcol" => 1),
+            3 => array("subcol" => 1));
 
         $expr = new IndexExpression("subcol", 1);
         $clause = new IndexClause(array($expr));
@@ -218,7 +242,8 @@ class AutopackKeysTest extends AutopackBase {
         $this->assertEquals(array(0 => array("subcol" => 0)), $res);
     }
 
-    public function test_get_indexed_slices_serialized() {
+    public function test_get_indexed_slices_serialized()
+    {
         $this->require_opp();
         $this->uuid_cf->truncate();
 
@@ -234,8 +259,8 @@ class AutopackKeysTest extends AutopackBase {
         $this->uuid_cf->buffer_size = 2;
 
         $expected = array(serialize($uuid2) => array("subcol" => 1),
-                          serialize($uuid3) => array("subcol" => 1),
-                          serialize($uuid4) => array("subcol" => 1));
+            serialize($uuid3) => array("subcol" => 1),
+            serialize($uuid4) => array("subcol" => 1));
 
         $expr = new IndexExpression("subcol", 1);
         $clause = new IndexClause(array($expr));
@@ -253,7 +278,8 @@ class AutopackKeysTest extends AutopackBase {
         $this->assertEquals(array(serialize($uuid1) => array("subcol" => 0)), $res);
     }
 
-    public function test_uuid_as_string() {
+    public function test_uuid_as_string()
+    {
         $dataKey = 'a0e13b40-ed53-11e2-91e2-0800200c9a66';
         $dataColumns = array(
             'b0885790-ed53-11e2-91e2-0800200c9a66' => 'bdb54c20-ed53-11e2-91e2-0800200c9a66',
@@ -266,13 +292,14 @@ class AutopackKeysTest extends AutopackBase {
         );
 
         $back = $this->uuid_cf->get($dataKey);
-        $this->assertEquals($back,$dataColumns);
+        $this->assertEquals($back, $dataColumns);
     }
 
     /**
      * @expectedException phpcassa\UUID\UUIDException
      */
-    public function test_uuid_as_string_bad_value() {
+    public function test_uuid_as_string_bad_value()
+    {
         $this->uuid_cf->truncate();
         $this->uuid_cf->insert(
             123,

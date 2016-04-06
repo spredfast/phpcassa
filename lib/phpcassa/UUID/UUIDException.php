@@ -4,5 +4,6 @@ namespace phpcassa\UUID;
 /**
  * @package phpcassa\Util
  */
-class UUIDException extends \Exception {
+class UUIDException extends \Exception
+{
 }

@@ -22,7 +22,6 @@
 
 namespace Thrift\Transport;
 
-use Thrift\Transport\TTransport;
 use Thrift\Exception\TTransportException;
 use Thrift\Factory\TStringFuncFactory;
 
@@ -31,8 +30,8 @@ use Thrift\Factory\TStringFuncFactory;
  *
  * @package thrift.transport
  */
-class THttpClient extends TTransport {
-
+class THttpClient extends TTransport
+{
   /**
    * The host to connect to
    *
@@ -83,13 +82,21 @@ class THttpClient extends TTransport {
   protected $timeout_;
 
   /**
+   * http headers
+   *
+   * @var array
+   */
+  protected $headers_;
+
+  /**
    * Make a new HTTP client.
    *
    * @param string $host
    * @param int    $port
    * @param string $uri
    */
-  public function __construct($host, $port=80, $uri='', $scheme = 'http') {
+  public function __construct($host, $port = 80, $uri = '', $scheme = 'http')
+  {
     if ((TStringFuncFactory::create()->strlen($uri) > 0) && ($uri{0} != '/')) {
       $uri = '/'.$uri;
     }
@@ -100,6 +107,7 @@ class THttpClient extends TTransport {
     $this->buf_ = '';
     $this->handle_ = null;
     $this->timeout_ = null;
+    $this->headers_ = array();
   }
 
   /**
@@ -107,7 +115,8 @@ class THttpClient extends TTransport {
    *
    * @param float $timeout
    */
-  public function setTimeoutSecs($timeout) {
+  public function setTimeoutSecs($timeout)
+  {
     $this->timeout_ = $timeout;
   }
 
@@ -116,7 +125,8 @@ class THttpClient extends TTransport {
    *
    * @return boolean true if open
    */
-  public function isOpen() {
+  public function isOpen()
+  {
     return true;
   }
 
@@ -130,7 +140,8 @@ class THttpClient extends TTransport {
   /**
    * Close the transport.
    */
-  public function close() {
+  public function close()
+  {
     if ($this->handle_) {
       @fclose($this->handle_);
       $this->handle_ = null;
@@ -144,7 +155,8 @@ class THttpClient extends TTransport {
    * @return string The data that has been read
    * @throws TTransportException if cannot read any more data
    */
-  public function read($len) {
+  public function read($len)
+  {
     $data = @fread($this->handle_, $len);
     if ($data === FALSE || $data === '') {
       $md = stream_get_meta_data($this->handle_);
@@ -154,6 +166,7 @@ class THttpClient extends TTransport {
         throw new TTransportException('THttpClient: Could not read '.$len.' bytes from '.$this->host_.':'.$this->port_.$this->uri_, TTransportException::UNKNOWN);
       }
     }
+
     return $data;
   }
 
@@ -163,7 +176,8 @@ class THttpClient extends TTransport {
    * @param string $buf  The data to write
    * @throws TTransportException if writing fails
    */
-  public function write($buf) {
+  public function write($buf)
+  {
     $this->buf_ .= $buf;
   }
 
@@ -172,15 +186,20 @@ class THttpClient extends TTransport {
    *
    * @throws TTransportException if a writing error occurs
    */
-  public function flush() {
+  public function flush()
+  {
     // God, PHP really has some esoteric ways of doing simple things.
     $host = $this->host_.($this->port_ != 80 ? ':'.$this->port_ : '');
 
-    $headers = array('Host: '.$host,
-                     'Accept: application/x-thrift',
-                     'User-Agent: PHP/THttpClient',
-                     'Content-Type: application/x-thrift',
-                     'Content-Length: '.TStringFuncFactory::create()->strlen($this->buf_));
+    $headers = array();
+    $defaultHeaders = array('Host' => $host,
+        'Accept' => 'application/x-thrift',
+        'User-Agent' => 'PHP/THttpClient',
+        'Content-Type' => 'application/x-thrift',
+        'Content-Length' => TStringFuncFactory::create()->strlen($this->buf_));
+    foreach (array_merge($defaultHeaders, $this->headers_) as $key => $value) {
+      $headers[] = "$key: $value";
+    }
 
     $options = array('method' => 'POST',
                      'header' => implode("\r\n", $headers),
@@ -200,6 +219,11 @@ class THttpClient extends TTransport {
       $error = 'THttpClient: Could not connect to '.$host.$this->uri_;
       throw new TTransportException($error, TTransportException::NOT_OPEN);
     }
+  }
+
+  public function addHeaders($headers)
+  {
+    $this->headers_ = array_merge($this->headers_, $headers);
   }
 
 }

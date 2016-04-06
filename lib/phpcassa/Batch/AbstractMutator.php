@@ -2,16 +2,22 @@
 
 namespace phpcassa\Batch;
 
-use phpcassa\Util\Clock;
+use cassandra\ConsistencyLevel;
 use cassandra\Deletion;
 use cassandra\Mutation;
 use cassandra\SlicePredicate;
+use phpcassa\ColumnFamily;
+use phpcassa\Connection\ConnectionPool;
+use phpcassa\Util\Clock;
 
 /**
  * Common methods shared by CfMutator and Mutator classes
  */
 abstract class AbstractMutator
 {
+    /**
+     * @var ConnectionPool
+     */
     protected $pool;
     protected $buffer = array();
     protected $cl;
@@ -22,10 +28,11 @@ abstract class AbstractMutator
      * If an error occurs, the buffer will be preserverd, allowing you to
      * attempt to call send() again later or take other recovery actions.
      *
-     * @param cassandra\ConsistencyLevel $consistency_level optional
+     * @param ConsistencyLevel $consistency_level optional
      *        override for the mutator's default consistency level
      */
-    public function send($consistency_level=null) {
+    public function send($consistency_level = null)
+    {
         if ($consistency_level === null)
             $wcl = $this->cl;
         else
@@ -58,12 +65,16 @@ abstract class AbstractMutator
         $this->buffer = array();
     }
 
-    protected function enqueue($key, $cf, $mutations) {
-        $mut = array($key, $cf->column_family, $mutations);
-        $this->buffer[] = $mut;
-    }
-
-    protected function insert_cf($column_family, $key, $columns, $timestamp=null, $ttl=null) {
+    /**
+     * @param ColumnFamily $column_family
+     * @param $key
+     * @param array $columns
+     * @param mixed $timestamp
+     * @param mixed $ttl
+     * @return $this
+     */
+    protected function insert_cf($column_family, $key, $columns, $timestamp = null, $ttl = null)
+    {
         if (!empty($columns)) {
             if ($timestamp === null)
                 $timestamp = Clock::get_time();
@@ -74,7 +85,22 @@ abstract class AbstractMutator
         return $this;
     }
 
-    protected function remove_cf($column_family, $key, $columns=null, $super_column=null, $timestamp=null) {
+    protected function enqueue($key, $cf, $mutations)
+    {
+        $mut = array($key, $cf->column_family, $mutations);
+        $this->buffer[] = $mut;
+    }
+
+    /**
+     * @param ColumnFamily $column_family
+     * @param mixed $key
+     * @param mixed $columns
+     * @param mixed $super_column
+     * @param mixed $timestamp
+     * @return $this
+     */
+    protected function remove_cf($column_family, $key, $columns = null, $super_column = null, $timestamp = null)
+    {
         if ($timestamp === null)
             $timestamp = Clock::get_time();
         $deletion = new Deletion();

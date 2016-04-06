@@ -1,24 +1,23 @@
 <?php
 
-use phpcassa\Connection\ConnectionPool;
+use cassandra\ConsistencyLevel;
 use phpcassa\ColumnFamily;
 use phpcassa\ColumnSlice;
+use phpcassa\Connection\ConnectionPool;
+use phpcassa\Index\IndexClause;
+use phpcassa\Index\IndexExpression;
 use phpcassa\Schema\DataType;
 use phpcassa\SystemManager;
 
-use phpcassa\Index\IndexExpression;
-use phpcassa\Index\IndexClause;
 
-use cassandra\ConsistencyLevel;
-use cassandra\NotFoundException;
-
-
-class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
+class ColumnFamilyTest extends PHPUnit_Framework_TestCase
+{
 
     private static $KEYS = array('key1', 'key2', 'key3');
     private static $KS = "TestColumnFamily";
 
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         try {
             $sys = new SystemManager();
 
@@ -37,74 +36,81 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
             $sys->create_column_family(self::$KS, 'Indexed1', $cfattrs);
             $sys->create_index(self::$KS, 'Indexed1', 'birthdate',
-                                     DataType::LONG_TYPE, 'birthday_index');
+                DataType::LONG_TYPE, 'birthday_index');
             $sys->close();
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             print($e);
             throw $e;
         }
     }
 
-    public static function tearDownAfterClass() {
+    public static function tearDownAfterClass()
+    {
         $sys = new SystemManager();
         $sys->drop_keyspace(self::$KS);
         $sys->close();
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->pool = new ConnectionPool(self::$KS);
         $this->cf = new ColumnFamily($this->pool, 'Standard1');
     }
 
-    public function tearDown() {
+    public function tearDown()
+    {
         if ($this->cf) {
-            foreach(self::$KEYS as $key)
+            foreach (self::$KEYS as $key)
                 $this->cf->remove($key);
         }
         $this->pool->dispose();
     }
 
-    public function test_empty() {
+    public function test_empty()
+    {
         $this->setExpectedException('\cassandra\NotFoundException');
         $this->cf->get(self::$KEYS[0]);
     }
 
-    public function test_insert_get() {
+    public function test_insert_get()
+    {
         $this->cf->insert(self::$KEYS[0], array('col' => 'val'));
         $this->assertEquals($this->cf->get(self::$KEYS[0]), array('col' => 'val'));
     }
 
-    public function test_insert_get_ttl() {
+    public function test_insert_get_ttl()
+    {
 
         //Mandatory for ttl in response
         $this->cf->return_format = ColumnFamily::OBJECT_FORMAT;
 
         //Data
         $columns = array('col1' => 'val1',
-                         'col2' => 'val2',
-                         'col3' => 'val3');
+            'col2' => 'val2',
+            'col3' => 'val3');
 
         // 1st test: $ttl is an Int
         $ttl = 7;
-        $this->cf->insert(self::$KEYS[0], $columns,null,$ttl);
+        $this->cf->insert(self::$KEYS[0], $columns, null, $ttl);
         $row = $this->cf->get(self::$KEYS[0]);
-        foreach($row as $column){
-            $this->assertEquals($column->ttl,7);
+        foreach ($row as $column) {
+            $this->assertEquals($column->ttl, 7);
         }
-        
+
         //2nd test: $ttl is an array
         $ttl = array('col1' => 10,
-                    'col3' => 12);
+            'col3' => 12);
 
-        $this->cf->insert(self::$KEYS[0], $columns,null,$ttl);
+        $this->cf->insert(self::$KEYS[0], $columns, null, $ttl);
         $row = $this->cf->get(self::$KEYS[0]);
-        $this->assertEquals($row[0]->ttl,10);
-        $this->assertEquals($row[1]->ttl,NULL);
-        $this->assertEquals($row[2]->ttl,12);
+        $this->assertEquals($row[0]->ttl, 10);
+        $this->assertEquals($row[1]->ttl, NULL);
+        $this->assertEquals($row[2]->ttl, 12);
     }
 
-    public function test_insert_multiget() {
+    public function test_insert_multiget()
+    {
         $columns1 = array('1' => 'val1', '2' => 'val2');
         $columns2 = array('3' => 'val1', '4' => 'val2');
 
@@ -137,11 +143,12 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
         }
     }
 
-    public function test_batch_insert() {
+    public function test_batch_insert()
+    {
         $columns1 = array('1' => 'val1', '2' => 'val2');
         $columns2 = array('3' => 'val1', '4' => 'val2');
         $rows = array(self::$KEYS[0] => $columns1,
-                      self::$KEYS[1] => $columns2);
+            self::$KEYS[1] => $columns2);
         $this->cf->batch_insert($rows);
         $rows = $this->cf->multiget(self::$KEYS);
         $this->assertCount(2, $rows);
@@ -149,48 +156,50 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($rows[self::$KEYS[1]], $columns2);
         $this->assertNotContains(self::$KEYS[2], $rows);
     }
-    
-    public function test_batch_insert_ttl() {
-        
+
+    public function test_batch_insert_ttl()
+    {
+
         //Mandatory for ttl in response
         $this->cf->return_format = ColumnFamily::OBJECT_FORMAT;
-        
+
         // 1st test: $ttl is an Integer
         $columns1 = array('1' => 'val1', '2' => 'val2');
         $columns2 = array('3' => 'val1', '4' => 'val2');
         $rows = array(self::$KEYS[0] => $columns1,
-        self::$KEYS[1] => $columns2);
-        $this->cf->batch_insert($rows,null,5);
+            self::$KEYS[1] => $columns2);
+        $this->cf->batch_insert($rows, null, 5);
         $rows = $this->cf->multiget(self::$KEYS);
         $this->assertCount(2, $rows);
-        
-        foreach ($rows as $objectRow){
+
+        foreach ($rows as $objectRow) {
             $key = $objectRow[0];
-            foreach ($objectRow[1] as $column){
-                $this->assertEquals($column->ttl,5);
+            foreach ($objectRow[1] as $column) {
+                $this->assertEquals($column->ttl, 5);
             }
         }
-        
+
         //2nd test: $ttl is an Array
         $rows = array(self::$KEYS[0] => $columns1,
-        self::$KEYS[1] => $columns2);
+            self::$KEYS[1] => $columns2);
         $ttlArray = array(self::$KEYS[0] => 10, self::$KEYS[1] => 15);
-        $this->cf->batch_insert($rows,NULL,$ttlArray);
+        $this->cf->batch_insert($rows, NULL, $ttlArray);
         $rows = $this->cf->multiget(self::$KEYS);
         $this->assertCount(2, $rows);
-        
-        foreach ($rows as $objectRow){
+
+        foreach ($rows as $objectRow) {
             $key = $objectRow[0];
-            foreach ($objectRow[1] as $column){
-                if($key == self::$KEYS[0])
-                    $this->assertEquals($column->ttl,10);
-                if($key == self::$KEYS[1])
-                    $this->assertEquals($column->ttl,15);
+            foreach ($objectRow[1] as $column) {
+                if ($key == self::$KEYS[0])
+                    $this->assertEquals($column->ttl, 10);
+                if ($key == self::$KEYS[1])
+                    $this->assertEquals($column->ttl, 15);
             }
         }
     }
 
-    public function test_insert_get_count() {
+    public function test_insert_get_count()
+    {
         $cols = array('1' => 'val1', '2' => 'val2');
         $this->cf->insert(self::$KEYS[0], $cols);
         $this->assertEquals($this->cf->get_count(self::$KEYS[0]), 2);
@@ -218,20 +227,14 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals(110, $this->cf->get_count(self::$KEYS[0]));
     }
 
-    private function multiget_slice_helper($start, $finish, $expected) {
-        $column_slice = new ColumnSlice($start, $finish);
-        $result = $this->cf->multiget_count(self::$KEYS, $column_slice);
-        $this->assertCount(3, $result);
-        $this->assertEquals($result[self::$KEYS[0]], $expected);
-    }
-
-    public function test_insert_multiget_count() {
+    public function test_insert_multiget_count()
+    {
         $columns = array('1' => 'val1', '2' => 'val2');
-        foreach(self::$KEYS as $key)
+        foreach (self::$KEYS as $key)
             $this->cf->insert($key, $columns);
 
         $result = $this->cf->multiget_count(self::$KEYS);
-        foreach(self::$KEYS as $key)
+        foreach (self::$KEYS as $key)
             $this->assertEquals($result[$key], 2);
 
         $column_slice = new ColumnSlice('1');
@@ -239,7 +242,7 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
         $this->assertCount(3, $result);
         $this->assertEquals($result[self::$KEYS[0]], 2);
 
-        $this->multiget_slice_helper('',  '2', 2);
+        $this->multiget_slice_helper('', '2', 2);
         $this->multiget_slice_helper('1', '2', 2);
         $this->multiget_slice_helper('1', '1', 1);
 
@@ -274,37 +277,33 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
         }
     }
 
-    protected static function endswith($haystack, $needle) {
-        $start  = strlen($needle) * -1; //negative
-        return (substr($haystack, $start) === $needle);
+    private function multiget_slice_helper($start, $finish, $expected)
+    {
+        $column_slice = new ColumnSlice($start, $finish);
+        $result = $this->cf->multiget_count(self::$KEYS, $column_slice);
+        $this->assertCount(3, $result);
+        $this->assertEquals($result[self::$KEYS[0]], $expected);
     }
 
-    protected function require_opp() {
-        $partitioner = $this->pool->call('describe_partitioner');
-        if ($this->endswith($partitioner, "RandomPartitioner") ||
-            $this->endswith($partitioner, "Murmur3Partitioner")) {
-            $this->markTestSkipped();
-        }
-    }
-
-    public function test_insert_get_range() {
+    public function test_insert_get_range()
+    {
         $this->require_opp();
         $cl = ConsistencyLevel::ONE;
         $cf = new ColumnFamily($this->pool,
-                               'Standard1', true, true,
-                               $read_consistency_level=$cl,
-                               $write_consistency_level=$cl,
-                               $buffer_size=10);
+            'Standard1', true, true,
+            $read_consistency_level = $cl,
+            $write_consistency_level = $cl,
+            $buffer_size = 10);
         $keys = array();
         $columns = array('c' => 'v');
         foreach (range(100, 200) as $i) {
-            $keys[] = 'key'.$i;
-            $cf->insert('key'.$i, $columns);
+            $keys[] = 'key' . $i;
+            $cf->insert('key' . $i, $columns);
         }
 
         # Keys at the end that we don't want
         foreach (range(201, 300) as $i)
-            $cf->insert('key'.$i, $columns);
+            $cf->insert('key' . $i, $columns);
 
 
         # Buffer size = 10; rowcount is divisible by buffer size
@@ -318,7 +317,7 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Fetch a single row
         $count = 0;
-        foreach ($cf->get_range($key_start='', $key_finish='', $row_count=1) as $key => $cols) {
+        foreach ($cf->get_range($key_start = '', $key_finish = '', $row_count = 1) as $key => $cols) {
             $this->assertContains($key, array($keys[0]));
             $count++;
         }
@@ -326,10 +325,10 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Buffer size larger than row count
         $cf = new ColumnFamily($this->pool, 'Standard1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=1000);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 1000);
         $count = 0;
-        foreach ($cf->get_range($key_start='', $key_finish='', $row_count=100) as $key => $cols) {
+        foreach ($cf->get_range($key_start = '', $key_finish = '', $row_count = 100) as $key => $cols) {
             $this->assertContains($key, $keys);
             unset($keys[$key]);
             $count++;
@@ -338,10 +337,10 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Buffer size larger than row count, less than total number of rows
         $cf = new ColumnFamily($this->pool, 'Standard1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=150);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 150);
         $count = 0;
-        foreach ($cf->get_range($key_start='', $key_finish='', $row_count=100) as $key => $cols) {
+        foreach ($cf->get_range($key_start = '', $key_finish = '', $row_count = 100) as $key => $cols) {
             $this->assertContains($key, $keys);
             unset($keys[$key]);
             $count++;
@@ -351,11 +350,11 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Odd number for batch size
         $cf = new ColumnFamily($this->pool, 'Standard1', true, true,
-                               $read_consistency_level=$cl,
-                               $write_consistency_level=$cl,
-                               $buffer_size=7);
+            $read_consistency_level = $cl,
+            $write_consistency_level = $cl,
+            $buffer_size = 7);
         $count = 0;
-        $rows = $cf->get_range($key_start='', $key_finish='', $row_count=100);
+        $rows = $cf->get_range($key_start = '', $key_finish = '', $row_count = 100);
         foreach ($rows as $key => $cols) {
             $this->assertContains($key, $keys);
             unset($keys[$key]);
@@ -366,11 +365,11 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Smallest buffer size available
         $cf = new ColumnFamily($this->pool, 'Standard1', true, true,
-                               $read_consistency_level=$cl,
-                               $write_consistency_level=$cl,
-                               $buffer_size=2);
+            $read_consistency_level = $cl,
+            $write_consistency_level = $cl,
+            $buffer_size = 2);
         $count = 0;
-        $rows = $cf->get_range($key_start='', $key_finish='', $row_count=100);
+        $rows = $cf->get_range($key_start = '', $key_finish = '', $row_count = 100);
         foreach ($rows as $key => $cols) {
             $this->assertContains($key, $keys);
             unset($keys[$key]);
@@ -381,15 +380,15 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Put the remaining keys in our list
         foreach (range(201, 300) as $i)
-            $keys[] = 'key'.$i;
+            $keys[] = 'key' . $i;
 
 
         # Row count above total number of rows
         $cf = new ColumnFamily($this->pool, 'Standard1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=2);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 2);
         $count = 0;
-        foreach ($cf->get_range($key_start='', $key_finish='', $row_count=10000) as $key => $cols) {
+        foreach ($cf->get_range($key_start = '', $key_finish = '', $row_count = 10000) as $key => $cols) {
             $this->assertContains($key, $keys);
             unset($keys[$key]);
             $count++;
@@ -399,24 +398,23 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Row count above total number of rows
         $cf = new ColumnFamily($this->pool, 'Standard1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=7);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 7);
         $count = 0;
-        foreach ($cf->get_range($key_start='', $key_finish='', $row_count=10000) as $key => $cols) {
+        foreach ($cf->get_range($key_start = '', $key_finish = '', $row_count = 10000) as $key => $cols) {
             $this->assertContains($key, $keys);
             unset($keys[$key]);
             $count++;
         }
         $this->assertEquals($count, 201);
-
 
 
         # Row count above total number of rows, buffer_size = total number of rows
         $cf = new ColumnFamily($this->pool, 'Standard1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=201);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 201);
         $count = 0;
-        foreach ($cf->get_range($key_start='', $key_finish='', $row_count=10000) as $key => $cols) {
+        foreach ($cf->get_range($key_start = '', $key_finish = '', $row_count = 10000) as $key => $cols) {
             $this->assertContains($key, $keys);
             unset($keys[$key]);
             $count++;
@@ -425,10 +423,10 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Row count above total number of rows, buffer_size > total number of rows
         $cf = new ColumnFamily($this->pool, 'Standard1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=10000);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 10000);
         $count = 0;
-        foreach ($cf->get_range($key_start='', $key_finish='', $row_count=10000) as $key => $cols) {
+        foreach ($cf->get_range($key_start = '', $key_finish = '', $row_count = 10000) as $key => $cols) {
             $this->assertContains($key, $keys);
             unset($keys[$key]);
             $count++;
@@ -439,27 +437,44 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
         $cf->truncate();
     }
 
-    public function test_batched_get_indexed_slices() {
+    protected function require_opp()
+    {
+        $partitioner = $this->pool->call('describe_partitioner');
+        if ($this->endswith($partitioner, "RandomPartitioner") ||
+            $this->endswith($partitioner, "Murmur3Partitioner")
+        ) {
+            $this->markTestSkipped();
+        }
+    }
+
+    protected static function endswith($haystack, $needle)
+    {
+        $start = strlen($needle) * -1; //negative
+        return (substr($haystack, $start) === $needle);
+    }
+
+    public function test_batched_get_indexed_slices()
+    {
         $this->require_opp();
         $cl = ConsistencyLevel::ONE;
         $cf = new ColumnFamily($this->pool, 'Indexed1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=10);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 10);
         $cf->truncate();
 
         $keys = array();
         $columns = array('birthdate' => 1);
         foreach (range(100, 200) as $i) {
-            $keys[] = 'key'.$i;
-            $cf->insert('key'.$i, $columns);
+            $keys[] = 'key' . $i;
+            $cf->insert('key' . $i, $columns);
         }
 
         # Keys at the end that we don't want
         foreach (range(201, 300) as $i)
-            $cf->insert('key'.$i, $columns);
+            $cf->insert('key' . $i, $columns);
 
 
-        $expr = new IndexExpression($column_name='birthdate', $value=1);
+        $expr = new IndexExpression($column_name = 'birthdate', $value = 1);
         $clause = new IndexClause(array($expr), 100);
 
         # Buffer size = 10; rowcount is divisible by buffer size
@@ -473,8 +488,8 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Buffer size larger than row count
         $cf = new ColumnFamily($this->pool, 'Indexed1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=1000);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 1000);
         $count = 0;
         foreach ($cf->get_indexed_slices($clause) as $key => $cols) {
             $this->assertContains($key, $keys);
@@ -486,8 +501,8 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Buffer size larger than row count, less than total number of rows
         $cf = new ColumnFamily($this->pool, 'Indexed1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=150);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 150);
         $count = 0;
         foreach ($cf->get_indexed_slices($clause) as $key => $cols) {
             $this->assertContains($key, $keys);
@@ -499,8 +514,8 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Odd number for batch size
         $cf = new ColumnFamily($this->pool, 'Indexed1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=7);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 7);
         $count = 0;
         foreach ($cf->get_indexed_slices($clause) as $key => $cols) {
             $this->assertContains($key, $keys);
@@ -512,8 +527,8 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Smallest buffer size available
         $cf = new ColumnFamily($this->pool, 'Indexed1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=2);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 2);
         $count = 0;
         foreach ($cf->get_indexed_slices($clause) as $key => $cols) {
             $this->assertContains($key, $keys);
@@ -525,14 +540,14 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Put the remaining keys in our list
         foreach (range(201, 300) as $i)
-            $keys[] = 'key'.$i;
+            $keys[] = 'key' . $i;
 
 
         # Row count above total number of rows
         $clause->count = 10000;
         $cf = new ColumnFamily($this->pool, 'Indexed1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=2);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 2);
         $count = 0;
         foreach ($cf->get_indexed_slices($clause) as $key => $cols) {
             $this->assertContains($key, $keys);
@@ -544,8 +559,8 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Row count above total number of rows
         $cf = new ColumnFamily($this->pool, 'Indexed1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=7);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 7);
         $count = 0;
         foreach ($cf->get_indexed_slices($clause) as $key => $cols) {
             $this->assertContains($key, $keys);
@@ -557,8 +572,8 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Row count above total number of rows, buffer_size = total number of rows
         $cf = new ColumnFamily($this->pool, 'Indexed1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=200);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 200);
         $count = 0;
         foreach ($cf->get_indexed_slices($clause) as $key => $cols) {
             $this->assertContains($key, $keys);
@@ -570,8 +585,8 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
 
         # Row count above total number of rows, buffer_size = total number of rows
         $cf = new ColumnFamily($this->pool, 'Indexed1', true, true,
-                               $read_consistency_level=$cl, $write_consistency_level=$cl,
-                               $buffer_size=10000);
+            $read_consistency_level = $cl, $write_consistency_level = $cl,
+            $buffer_size = 10000);
         $count = 0;
         foreach ($cf->get_indexed_slices($clause) as $key => $cols) {
             $this->assertContains($key, $keys);
@@ -583,22 +598,23 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
         $cf->truncate();
     }
 
-    public function test_get_indexed_slices() {
+    public function test_get_indexed_slices()
+    {
         $this->require_opp();
         $indexed_cf = new ColumnFamily($this->pool, 'Indexed1');
         $indexed_cf->truncate();
 
         $columns = array('birthdate' => 1);
 
-        foreach(range(1,3) as $i)
-            $indexed_cf->insert('key'.$i, $columns);
+        foreach (range(1, 3) as $i)
+            $indexed_cf->insert('key' . $i, $columns);
 
-        $expr = new IndexExpression($column_name='birthdate', $value=1);
+        $expr = new IndexExpression($column_name = 'birthdate', $value = 1);
         $clause = new IndexClause(array($expr), 10000);
         $result = $indexed_cf->get_indexed_slices($clause);
 
         $count = 0;
-        foreach($result as $key => $cols) {
+        foreach ($result as $key => $cols) {
             $count++;
             $this->assertEquals($columns, $cols);
             $this->assertEquals($key, "key$count");
@@ -617,7 +633,7 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
         $result = $indexed_cf->get_indexed_slices($clause);
 
         $count = 0;
-        foreach($result as $key => $cols) {
+        foreach ($result as $key => $cols) {
             $count++;
             $this->assertContains($key, array("key1", "key3"));
         }
@@ -626,7 +642,7 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
         $indexed_cf->truncate();
 
         $keys = array();
-        foreach(range(1,1000) as $i) {
+        foreach (range(1, 1000) as $i) {
             $indexed_cf->insert("key$i", $columns);
             if ($i % 50 != 0)
                 $indexed_cf->remove("key$i");
@@ -635,7 +651,7 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
         }
 
         $count = 0;
-        foreach($result as $key => $cols) {
+        foreach ($result as $key => $cols) {
             $count++;
             $this->assertContains($key, $keys);
             unset($keys[$key]);
@@ -645,7 +661,8 @@ class ColumnFamilyTest extends PHPUnit_Framework_TestCase {
         $indexed_cf->truncate();
     }
 
-    public function test_remove() {
+    public function test_remove()
+    {
         $columns = array('1' => 'val1', '2' => 'val2');
         $this->cf->insert(self::$KEYS[0], $columns);
 

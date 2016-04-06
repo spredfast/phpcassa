@@ -8,9 +8,10 @@ namespace phpcassa\Schema\DataType;
  *
  * @package phpcassa\Schema\DataType
  */
-class IntegerType extends CassandraType {
+class IntegerType extends CassandraType
+{
 
-    public function pack($value, $is_name=null, $slice_end=null, $is_data=null)
+    public function pack($value, $is_name = null, $slice_end = null, $is_data = null)
     {
         $value = (int)$value;
         $out = array();
@@ -41,7 +42,7 @@ class IntegerType extends CassandraType {
         return strrev(implode($out));
     }
 
-    public function unpack($data, $is_name=null)
+    public function unpack($data, $is_name = null)
     {
         $val = hexdec(bin2hex($data));
         if ((ord($data[0]) & 128) != 0)

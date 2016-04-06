@@ -2,9 +2,10 @@
 
 use phpcassa\UUID;
 
-require_once(__DIR__.'/ObjectFormatCFTest.php');
+require_once(__DIR__ . '/ObjectFormatCFTest.php');
 
-class ObjectFormatCounterCFTest extends ObjectFormatCFTest {
+class ObjectFormatCounterCFTest extends ObjectFormatCFTest
+{
 
     protected static $CF = "Counter1";
 
@@ -14,11 +15,14 @@ class ObjectFormatCounterCFTest extends ObjectFormatCFTest {
         "default_validation_class" => "CounterColumnType"
     );
 
-    public function setUp() {
+    public function setUp()
+    {
         parent::setUp();
         $this->cols = array(array(UUID::uuid1(), 'val1'),
-                            array(UUID::uuid1(), 'val2'));
+            array(UUID::uuid1(), 'val2'));
     }
 
-    public function test_indexed_slices() { }
+    public function test_indexed_slices()
+    {
+    }
 }

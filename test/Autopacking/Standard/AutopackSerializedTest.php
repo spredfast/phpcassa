@@ -1,21 +1,22 @@
 <?php
 
-require_once(__DIR__.'/StandardBase.php');
+require_once(__DIR__ . '/StandardBase.php');
 
-use phpcassa\Connection\ConnectionPool;
 use phpcassa\ColumnFamily;
+use phpcassa\Connection\ConnectionPool;
 use phpcassa\Schema\DataType;
 use phpcassa\Schema\DataType\DateType;
 use phpcassa\SystemManager;
 use phpcassa\Util\Clock;
-
 use phpcassa\UUID;
 
-class AutopackStandardSerializedTest extends StandardBase {
+class AutopackStandardSerializedTest extends StandardBase
+{
 
     protected $SERIALIZED = true;
 
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         parent::setUpBeforeClass();
 
         $sys = new SystemManager();
@@ -42,20 +43,21 @@ class AutopackStandardSerializedTest extends StandardBase {
         $sys->create_column_family(self::$KS, 'StdNonScalarComposite', $cfattrs);
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->client = new ConnectionPool(self::$KS);
 
-        $this->cf_float                = new ColumnFamily($this->client, 'StdFloat');
-        $this->cf_double               = new ColumnFamily($this->client, 'StdDouble');
-        $this->cf_time                 = new ColumnFamily($this->client, 'StdTimeUUID');
-        $this->cf_lex                  = new ColumnFamily($this->client, 'StdLexicalUUID');
-        $this->cf_date                 = new ColumnFamily($this->client, 'StdDate');
-        $this->cf_composite            = new ColumnFamily($this->client, 'StdComposite');
+        $this->cf_float = new ColumnFamily($this->client, 'StdFloat');
+        $this->cf_double = new ColumnFamily($this->client, 'StdDouble');
+        $this->cf_time = new ColumnFamily($this->client, 'StdTimeUUID');
+        $this->cf_lex = new ColumnFamily($this->client, 'StdLexicalUUID');
+        $this->cf_date = new ColumnFamily($this->client, 'StdDate');
+        $this->cf_composite = new ColumnFamily($this->client, 'StdComposite');
         $this->cf_non_scalar_composite = new ColumnFamily($this->client, 'StdNonScalarComposite');
 
         $this->cfs = array($this->cf_float, $this->cf_double,
-                           $this->cf_time, $this->cf_lex,
-                           $this->cf_composite);
+            $this->cf_time, $this->cf_lex,
+            $this->cf_composite);
 
         // make a millisecond precision timestamp
         if (PHP_INT_MAX === 2147483647) {
@@ -80,7 +82,35 @@ class AutopackStandardSerializedTest extends StandardBase {
         $this->LEX3 = UUID::import('cccccccccccccccccccccccccccccccc');
     }
 
-    protected function make_type_groups() {
+    public function test_uuid1_generation()
+    {
+        if (PHP_INT_MAX === 2147483647) {
+            $this->markTestSkipped();
+        }
+
+        $micros = 1293769171436849;
+        $uuid = UUID::import(UUID::uuid1(null, $micros));
+        $t = (int)($uuid->time * 1000000);
+        $this->assertEquals($micros, $t, '', 100);
+    }
+
+    public function test_date_type_formats()
+    {
+        $time1 = \microtime();
+        \settype($time1, 'string'); //convert to string to keep trailing zeroes
+        $time2 = explode(" ", $time1);
+        $sub_secs = \preg_replace('/0./', '', $time2[0], 1);
+        $time3 = ($time2[1] . $sub_secs) / 100;
+        $time3 -= ((int)$time3) % 1000;
+        $time3 /= 1000000;
+
+        $dtInstance = new DateType();
+        $unpacked = $dtInstance->unpack($dtInstance->pack($time1), false);
+        $this->assertEquals($time3, $unpacked, "", 0.005);
+    }
+
+    protected function make_type_groups()
+    {
         $type_groups = array();
 
         $float_cols = array(1.25, 1.5, 1.75);
@@ -113,30 +143,5 @@ class AutopackStandardSerializedTest extends StandardBase {
         $type_groups[] = $this->make_group($this->cf_non_scalar_composite, $non_scalar_composite_cols);
 
         return $type_groups;
-    }
-
-    public function test_uuid1_generation() {
-        if (PHP_INT_MAX === 2147483647) {
-            $this->markTestSkipped();
-        }
-
-        $micros = 1293769171436849;
-        $uuid = UUID::import(UUID::uuid1(null, $micros));
-        $t = (int)($uuid->time * 1000000);
-        $this->assertEquals($micros, $t, '', 100);
-    }
-
-    public function test_date_type_formats() {
-        $time1 = \microtime();
-        \settype($time1, 'string'); //convert to string to keep trailing zeroes
-        $time2 = explode(" ", $time1);
-        $sub_secs = \preg_replace('/0./', '', $time2[0], 1);
-        $time3 = ($time2[1].$sub_secs)/100;
-        $time3 -= ((int)$time3) % 1000;
-        $time3 /= 1000000;
-
-        $dtInstance = new DateType();
-        $unpacked = $dtInstance->unpack($dtInstance->pack($time1), false);
-        $this->assertEquals($time3, $unpacked, "", 0.005);
     }
 }

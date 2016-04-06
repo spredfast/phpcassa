@@ -1,7 +1,6 @@
 <?php
 namespace phpcassa\Schema\DataType;
 
-use phpcassa\Schema\DataType\Serialized;
 use phpcassa\UUID;
 use phpcassa\UUID\UUIDException;
 
@@ -12,7 +11,8 @@ use phpcassa\UUID\UUIDException;
  */
 class UUIDType extends CassandraType implements Serialized
 {
-    public function pack($value, $is_name=true, $slice_end=null, $is_data=false) {
+    public function pack($value, $is_name = true, $slice_end = null, $is_data = false)
+    {
         if ($is_name && $is_data) {
             $value = unserialize($value);
         }
@@ -20,7 +20,7 @@ class UUIDType extends CassandraType implements Serialized
         if (!$is_uuid && is_string($value)) {
             try {
                 $value = UUID::import($value);
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 throw new UUIDException("Error casting '$value' to UUID: $e");
             }
         } else if (!$is_uuid) {
@@ -29,7 +29,8 @@ class UUIDType extends CassandraType implements Serialized
         return $value->bytes;
     }
 
-    public function unpack($data, $handle_serialize=true) {
+    public function unpack($data, $handle_serialize = true)
+    {
         $value = UUID::import($data);
         if ($handle_serialize) {
             return serialize($value);
