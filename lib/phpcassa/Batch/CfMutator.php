@@ -1,29 +1,32 @@
 <?php
 namespace phpcassa\Batch;
 
-use phpcassa\Batch\AbstractMutator;
+use cassandra\ConsistencyLevel;
+use phpcassa\AbstractColumnFamily;
 
 /**
- * A convenience subclass of phpcassa\Batch\Mutator for dealing
+ * A convenience subclass of Batch\Mutator for dealing
  * with batch operations on a single column family.
  *
- * @package phpcassa\Batch
+ * @package Batch
  */
-class CfMutator extends AbstractMutator {
+class CfMutator extends AbstractMutator
+{
 
     protected $cf;
 
     /**
      * Initialize a mutator for a given column family.
      *
-     * @param phpcassa\ColumnFamily $column_family an initialized instanced
+     * @param AbstractColumnFamily $column_family an initialized instanced
      *        of ColumnFamily; this object's pool will be used for all
      *        operations.
-     * @param phpcassa\ConsistencyLevel $write_consistency_level the consistency
+     * @param ConsistencyLevel $write_consistency_level the consistency
      *        level this mutator will write at; if left as NULL, this defaults to
      *        $column_family->write_consistency_level.
      */
-    public function __construct($column_family, $write_consistency_level=null) {
+    public function __construct($column_family, $write_consistency_level = null)
+    {
         $this->cf = $column_family;
         $this->pool = $column_family->pool;
         $this->buffer = array();
@@ -42,8 +45,10 @@ class CfMutator extends AbstractMutator {
      * @param int $timestamp an optional timestamp (default is "now", when
      *        this function is called, not when send() is called)
      * @param int $ttl a TTL to apply to all columns inserted here
+     * @return $this
      */
-    public function insert($key, $columns, $timestamp=null, $ttl=null) {
+    public function insert($key, $columns, $timestamp = null, $ttl = null)
+    {
         return $this->insert_cf($this->cf, $key, $columns, $timestamp, $ttl);
     }
 
@@ -52,12 +57,15 @@ class CfMutator extends AbstractMutator {
      *
      * @param mixed $key the row key
      * @param mixed[] $columns a list of columns or super columns to delete
-     * @param mixed $supercolumn if you want to delete only some subcolumns from
-     *        a single super column, set this to the super column name
+     * @param mixed $super_column
      * @param int $timestamp an optional timestamp (default is "now", when
      *        this function is called, not when send() is called)
+     * @return $this
+     * @internal param mixed $supercolumn if you want to delete only some subcolumns from
+     *        a single super column, set this to the super column name
      */
-    public function remove($key, $columns=null, $super_column=null, $timestamp=null) {
+    public function remove($key, $columns = null, $super_column = null, $timestamp = null)
+    {
         return $this->remove_cf($this->cf, $key, $columns, $super_column, $timestamp);
     }
 }

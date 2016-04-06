@@ -1,15 +1,17 @@
 <?php
 
-require_once(__DIR__.'/StandardBase.php');
+require_once(__DIR__ . '/StandardBase.php');
 
-use phpcassa\Connection\ConnectionPool;
 use phpcassa\ColumnFamily;
+use phpcassa\Connection\ConnectionPool;
 use phpcassa\Schema\DataType;
 use phpcassa\SystemManager;
 
-class AutopackStandardTest extends StandardBase {
+class AutopackStandardTest extends StandardBase
+{
 
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         parent::setUpBeforeClass();
 
         $sys = new SystemManager();
@@ -32,16 +34,17 @@ class AutopackStandardTest extends StandardBase {
         $sys->create_column_family(self::$KS, 'StdUTF8', $cfattrs);
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->client = new ConnectionPool(self::$KS);
 
         if (self::$have64Bit) {
-            $this->cf_long  = new ColumnFamily($this->client, 'StdLong');
+            $this->cf_long = new ColumnFamily($this->client, 'StdLong');
         }
-        $this->cf_int   = new ColumnFamily($this->client, 'StdInteger');
-        $this->cf_int32  = new ColumnFamily($this->client, 'StdInt32');
+        $this->cf_int = new ColumnFamily($this->client, 'StdInteger');
+        $this->cf_int32 = new ColumnFamily($this->client, 'StdInt32');
         $this->cf_ascii = new ColumnFamily($this->client, 'StdAscii');
-        $this->cf_utf8  = new ColumnFamily($this->client, 'StdUTF8');
+        $this->cf_utf8 = new ColumnFamily($this->client, 'StdUTF8');
 
         $this->cfs = array($this->cf_int, $this->cf_ascii, $this->cf_utf8);
         if (self::$have64Bit) {
@@ -49,7 +52,8 @@ class AutopackStandardTest extends StandardBase {
         }
     }
 
-    public function test_false_colnames() {
+    public function test_false_colnames()
+    {
         $this->cf_int->insert(self::$KEYS[0], array(0 => "foo"));
         $this->assertEquals($this->cf_int->get(self::$KEYS[0]), array(0 => "foo"));
         $this->cf_int->remove(self::$KEYS[0]);
@@ -57,13 +61,14 @@ class AutopackStandardTest extends StandardBase {
         $this->cf_int->insert(self::$KEYS[0], array(null => "foo"));
     }
 
-    protected function make_type_groups() {
+    protected function make_type_groups()
+    {
         $type_groups = array();
 
         if (self::$have64Bit) {
             $long_cols = array(111111111111,
-                               222222222222,
-                               333333333333);
+                222222222222,
+                333333333333);
             $type_groups[] = $this->make_group($this->cf_long, $long_cols);
         }
 
@@ -76,7 +81,7 @@ class AutopackStandardTest extends StandardBase {
         $ascii_cols = array('aaaa', 'bbbb', 'cccc');
         $type_groups[] = $this->make_group($this->cf_ascii, $ascii_cols);
 
-        $utf8_cols = array("a&#1047;", "b&#1048;", "c&#1049;"); 
+        $utf8_cols = array("a&#1047;", "b&#1048;", "c&#1049;");
         $type_groups[] = $this->make_group($this->cf_utf8, $utf8_cols);
 
         return $type_groups;

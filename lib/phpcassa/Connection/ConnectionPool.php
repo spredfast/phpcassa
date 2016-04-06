@@ -1,16 +1,11 @@
 <?php
 namespace phpcassa\Connection;
 
+use cassandra\NotFoundException;
+use cassandra\TimedOutException;
+use cassandra\UnavailableException;
 use Thrift\Exception\TException;
 use Thrift\Exception\TTransportException;
-
-use phpcassa\Connection\ConnectionWrapper;
-use phpcassa\Connection\MaxRetriesException;
-use phpcassa\Connection\NoServerAvailable;
-
-use cassandra\TimedOutException;
-use cassandra\NotFoundException;
-use cassandra\UnavailableException;
 
 /**
  * A pool of connections to a set of servers in a cluster.
@@ -18,7 +13,8 @@ use cassandra\UnavailableException;
  *
  * @package phpcassa\Connection
  */
-class ConnectionPool {
+class ConnectionPool
+{
 
     const BASE_BACKOFF = 0.1;
     const MICROS = 1000000;
@@ -30,6 +26,17 @@ class ConnectionPool {
     protected static $default_servers = array('localhost:9160');
 
     public $keyspace;
+    /**
+     * int $max_retries how many times an operation should be retried before
+     *     throwing a MaxRetriesException. Using 0 disables retries; using -1 causes
+     *     unlimited retries. The default is 5.
+     */
+    public $max_retries = self::DEFAULT_MAX_RETRIES;
+    /**
+     * int $recycle after this many operations, a connection will be automatically
+     *     closed and replaced. Defaults to 10,000.
+     */
+    public $recycle = self::DEFAULT_RECYCLE;
     protected $servers;
     protected $pool_size;
     protected $send_timeout;
@@ -38,19 +45,6 @@ class ConnectionPool {
     protected $framed_transport;
     protected $queue;
     protected $keyspace_description = NULL;
-
-    /**
-     * int $max_retries how many times an operation should be retried before
-     *     throwing a MaxRetriesException. Using 0 disables retries; using -1 causes
-     *     unlimited retries. The default is 5.
-     */
-    public $max_retries = self::DEFAULT_MAX_RETRIES;
-
-    /**
-     * int $recycle after this many operations, a connection will be automatically
-     *     closed and replaced. Defaults to 10,000.
-     */
-    public $recycle = self::DEFAULT_RECYCLE;
 
     /**
      * Constructs a ConnectionPool.
@@ -78,14 +72,14 @@ class ConnectionPool {
      *        is the default. The default value is true.
      */
     public function __construct($keyspace,
-                                $servers=NULL,
-                                $pool_size=NULL,
-                                $max_retries=self::DEFAULT_MAX_RETRIES,
-                                $send_timeout=5000,
-                                $recv_timeout=5000,
-                                $recycle=self::DEFAULT_RECYCLE,
-                                $credentials=NULL,
-                                $framed_transport=true)
+                                $servers = NULL,
+                                $pool_size = NULL,
+                                $max_retries = self::DEFAULT_MAX_RETRIES,
+                                $send_timeout = 5000,
+                                $recv_timeout = 5000,
+                                $recycle = self::DEFAULT_RECYCLE,
+                                $credentials = NULL,
+                                $framed_transport = true)
     {
         $this->keyspace = $keyspace;
         $this->send_timeout = $send_timeout;
@@ -116,12 +110,22 @@ class ConnectionPool {
         $this->list_position = 0;
     }
 
-    protected function make_conn() {
+    /**
+     * Adds connections to the pool until $pool_size connections
+     * are in the pool.
+     */
+    public function fill()
+    {
+        while (count($this->queue) < $this->pool_size)
+            $this->make_conn();
+    }
+
+    protected function make_conn()
+    {
         // Keep trying to make a new connection, stopping after we've
         // tried every server twice
         $err = "";
-        foreach (range(1, count($this->servers) * 2) as $i)
-        {
+        foreach (range(1, count($this->servers) * 2) as $i) {
             try {
                 $this->list_position = ($this->list_position + 1) % count($this->servers);
                 $new_conn = new ConnectionWrapper($this->keyspace, $this->servers[$this->list_position],
@@ -139,88 +143,39 @@ class ConnectionPool {
             }
         }
         throw new NoServerAvailable("An attempt was made to connect to every server twice, but " .
-            "all attempts failed. The last error was: " . get_class($err) .":". $err->getMessage());
+            "all attempts failed. The last error was: " . get_class($err) . ":" . $err->getMessage());
     }
 
     /**
-     * Adds connections to the pool until $pool_size connections
-     * are in the pool.
-     */
-    public function fill() {
-        while (count($this->queue) < $this->pool_size)
-            $this->make_conn();
-    }
-
-    /**
-     * Retrieves a connection from the pool.
+     * This method called every time an error is logged. By default, it will
+     * call the PHP builtin function error_log() with a messageType of 0. To
+     * change this behavior, you can create a subclass and override this
+     * method.
      *
-     * If the pool has fewer than $pool_size connections in
-     * it, a new connection will be created.
+     * Note that PHP has strange logging behavior. In particular, if you are
+     * running the PHP cli and you haven't set a directive for error_log in
+     * your php.ini, this will log to stdout even if you've called
+     * error_reporting(0), which is supposed to suppress all logging.
      *
-     * @return ConnectionWrapper a connection
+     * @param string $errorMsg
+     * @param int $messageType
      */
-    public function get() {
-        $num_conns = count($this->queue);
-        if ($num_conns < $this->pool_size) {
-            try {
-                $this->make_conn();
-            } catch (NoServerAvailable $e) {
-                if ($num_conns == 0)
-                    throw $e;
-            }
-        }
-        return array_shift($this->queue);
-    }
-
-    /**
-     * Returns a connection to the pool.
-     * @param ConnectionWrapper $connection
-     */
-    public function return_connection($connection) {
-        if ($connection->op_count >= $this->recycle) {
-            $this->stats['recycled'] += 1;
-            $connection->close();
-            $this->make_conn();
-            $connection = $this->get();
-        }
-        array_push($this->queue, $connection);
+    protected function error_log($errorMsg, $messageType = 0)
+    {
+        error_log($errorMsg, $messageType);
     }
 
     /**
      * Gets the keyspace description, caching the results for later lookups.
      * @return mixed
      */
-    public function describe_keyspace() {
+    public function describe_keyspace()
+    {
         if (NULL === $this->keyspace_description) {
             $this->keyspace_description = $this->call("describe_keyspace", $this->keyspace);
         }
 
         return $this->keyspace_description;
-    }
-
-    /**
-     * Closes all connections in the pool.
-     */
-    public function dispose() {
-        foreach($this->queue as $conn)
-            $conn->close();
-    }
-
-    /**
-     * Closes all connections in the pool.
-     */
-    public function close() {
-        $this->dispose();
-    }
-
-    /**
-     * Returns information about the number of opened connections, failed
-     * operations, and recycled connections.
-     * @return array Stats in the form array("failed" => failure_count,
-     *         "created" => creation_count, "recycled" => recycle_count)
-     */
-    public function stats() {
-        return $this->stats;
     }
 
     /**
@@ -241,16 +196,20 @@ class ConnectionPool {
      * In general, this method should *not* be used by users of the
      * library. It is primarily intended for internal use, but is left
      * exposed as an open workaround if needed.
-     *
      * @return mixed
+     * @throws MaxRetriesException
+     * @throws NoServerAvailable
+     * @throws NotFoundException
+     * @throws \Exception
      */
-    public function call() {
+    public function call()
+    {
         $args = func_get_args(); // Get all of the args passed to this function
         $f = array_shift($args); // pull the function from the beginning
 
         $retry_count = 0;
         if ($this->max_retries == -1)
-            $tries =  self::MAX_RETRIES;
+            $tries = self::MAX_RETRIES;
         elseif ($this->max_retries == 0)
             $tries = 1;
         else
@@ -281,11 +240,49 @@ class ConnectionPool {
                 throw $e;
             }
         }
-        throw new MaxRetriesException("An attempt to execute $f failed $tries times.".
+        throw new MaxRetriesException("An attempt to execute $f failed $tries times." .
             " The last error was " . get_class($last_err) . ":" . $last_err->getMessage());
     }
 
-    protected function handle_conn_failure($conn, $f, $exc, $retry_count) {
+    /**
+     * Retrieves a connection from the pool.
+     *
+     * If the pool has fewer than $pool_size connections in
+     * it, a new connection will be created.
+     * @return ConnectionWrapper a connection
+     * @throws NoServerAvailable
+     */
+    public function get()
+    {
+        $num_conns = count($this->queue);
+        if ($num_conns < $this->pool_size) {
+            try {
+                $this->make_conn();
+            } catch (NoServerAvailable $e) {
+                if ($num_conns == 0)
+                    throw $e;
+            }
+        }
+        return array_shift($this->queue);
+    }
+
+    /**
+     * Returns a connection to the pool.
+     * @param ConnectionWrapper $connection
+     */
+    public function return_connection($connection)
+    {
+        if ($connection->op_count >= $this->recycle) {
+            $this->stats['recycled'] += 1;
+            $connection->close();
+            $this->make_conn();
+            $connection = $this->get();
+        }
+        array_push($this->queue, $connection);
+    }
+
+    protected function handle_conn_failure($conn, $f, $exc, $retry_count)
+    {
         $err = (string)$exc;
         $this->error_log("Error performing $f on $conn->server: $err", 0);
         $conn->close();
@@ -295,20 +292,30 @@ class ConnectionPool {
     }
 
     /**
-     * This method called every time an error is logged. By default, it will
-     * call the PHP builtin function error_log() with a messageType of 0. To
-     * change this behavior, you can create a subclass and override this
-     * method.
-     *
-     * Note that PHP has strange logging behavior. In particular, if you are
-     * running the PHP cli and you haven't set a directive for error_log in
-     * your php.ini, this will log to stdout even if you've called
-     * error_reporting(0), which is supposed to suppress all logging.
-     *
-     * @param string $errorMsg
-     * @param int $messageType
+     * Closes all connections in the pool.
      */
-    protected function error_log($errorMsg, $messageType=0) {
-        error_log($errorMsg, $messageType);
+    public function close()
+    {
+        $this->dispose();
+    }
+
+    /**
+     * Closes all connections in the pool.
+     */
+    public function dispose()
+    {
+        foreach ($this->queue as $conn)
+            $conn->close();
+    }
+
+    /**
+     * Returns information about the number of opened connections, failed
+     * operations, and recycled connections.
+     * @return array Stats in the form array("failed" => failure_count,
+     *         "created" => creation_count, "recycled" => recycle_count)
+     */
+    public function stats()
+    {
+        return $this->stats;
     }
 }

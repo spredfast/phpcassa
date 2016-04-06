@@ -1,27 +1,25 @@
 <?php
 namespace phpcassa;
 
-use phpcassa\ColumnFamily;
-use phpcassa\ColumnSlice;
-
-use cassandra\Deletion;
-use cassandra\ColumnParent;
+use cassandra\Column;
+use cassandra\ColumnOrSuperColumn;
 use cassandra\ColumnPath;
 use cassandra\CounterColumn;
 use cassandra\CounterSuperColumn;
-use cassandra\ColumnOrSuperColumn;
-use cassandra\Column;
+use cassandra\Deletion;
 use cassandra\SuperColumn;
+use phpcassa\Iterator\RangeColumnFamilyIterator;
 
 /**
  * Representation of a super column family in Cassandra.
  *
- * Subclasses \phpcassa\ColumnFamily, so those methods are also
+ * Subclasses ColumnFamily, so those methods are also
  * available.
  *
  * @package phpcassa
  */
-class SuperColumnFamily extends AbstractColumnFamily {
+class SuperColumnFamily extends AbstractColumnFamily
+{
 
     /**
      * Fetch a single super column.
@@ -30,18 +28,19 @@ class SuperColumnFamily extends AbstractColumnFamily {
      *
      * @param string $key row key to fetch
      * @param mixed $super_column return only subcolumns of this super column
-     * @param \phpcassa\ColumnSlice a slice of subcolumns to fetch, or null
+     * @param ColumnSlice $column_slice a slice of subcolumns to fetch, or null
      * @param mixed[] $column_names limit the subcolumns fetched to this list
-     * @param ConsistencyLevel $consistency_level affects the guaranteed
+     * @param int $consistency_level affects the guaranteed
      *        number of nodes that must respond before the operation returns
      *
      * @return mixed array(subcolumn_name => subcolumn_value)
      */
     public function get_super_column($key,
                                      $super_column,
-                                     $column_slice=null,
-                                     $column_names=null,
-                                     $consistency_level=null) {
+                                     $column_slice = null,
+                                     $column_names = null,
+                                     $consistency_level = null)
+    {
 
         $cp = $this->create_column_parent($super_column);
         $slice = $this->create_slice_predicate($column_names, $column_slice, false);
@@ -56,22 +55,23 @@ class SuperColumnFamily extends AbstractColumnFamily {
      *
      * @param string[] $keys row keys to fetch
      * @param mixed $super_column return only subcolumns of this super column
-     * @param \phpcassa\ColumnSlice a slice of subcolumns to fetch, or null
+     *  slice of subcolumns to fetch, or null
+     * @param ColumnSlice $column_slice
      * @param mixed[] $column_names limit the subcolumns fetched to this list
-     * @param ConsistencyLevel $consistency_level affects the guaranteed
+     * @param int $consistency_level affects the guaranteed
      *        number of nodes that must respond before the operation returns
      * @param int $buffer_size the number of keys to multiget at a single time. If your
      *        rows are large, having a high buffer size gives poor performance; if your
      *        rows are small, consider increasing this value.
-     *
      * @return mixed array(key => array(subcolumn_name => subcolumn_value))
      */
     public function multiget_super_column($keys,
                                           $super_column,
-                                          $column_slice=null,
-                                          $column_names=null,
-                                          $consistency_level=null,
-                                          $buffer_size=16)  {
+                                          $column_slice = null,
+                                          $column_names = null,
+                                          $consistency_level = null,
+                                          $buffer_size = 16)
+    {
 
         $cp = $this->create_column_parent($super_column);
         $slice = $this->create_slice_predicate($column_names, $column_slice, false);
@@ -84,18 +84,19 @@ class SuperColumnFamily extends AbstractColumnFamily {
      *
      * @param string $key row to be counted
      * @param mixed $super_column count only subcolumns in this super column
-     * @param \phpcassa\ColumnSlice a slice of subcolumns to count, or null
+     * @param ColumnSlice $column_slice a slice of subcolumns to count, or null
      * @param mixed[] $column_names limit the possible subcolumns or counted to this list
-     * @param ConsistencyLevel $consistency_level affects the guaranteed
+     * @param int $consistency_level affects the guaranteed
      *        number of nodes that must respond before the operation returns
      *
      * @return int
      */
     public function get_subcolumn_count($key,
                                         $super_column,
-                                        $column_slice=null,
-                                        $column_names=null,
-                                        $consistency_level=null) {
+                                        $column_slice = null,
+                                        $column_names = null,
+                                        $consistency_level = null)
+    {
 
         $cp = $this->create_column_parent($super_column);
         $slice = $this->create_slice_predicate(
@@ -110,18 +111,19 @@ class SuperColumnFamily extends AbstractColumnFamily {
      *
      * @param string[] $keys rows to be counted
      * @param mixed $super_column count only subcolumns in this super column
-     * @param \phpcassa\ColumnSlice a slice of subcolumns to count, or null
+     * @param ColumnSlice $column_slice a slice of subcolumns to count, or null
      * @param mixed[] $column_names limit the possible subcolumns counted to this list
-     * @param ConsistencyLevel $consistency_level affects the guaranteed
+     * @param int $consistency_level affects the guaranteed
      *        number of nodes that must respond before the operation returns
      *
      * @return mixed array(row_key => subcolumn_count)
      */
     public function multiget_subcolumn_count($keys,
                                              $super_column,
-                                             $column_slice=null,
-                                             $column_names=null,
-                                             $consistency_level=null) {
+                                             $column_slice = null,
+                                             $column_names = null,
+                                             $consistency_level = null)
+    {
 
         $cp = $this->create_column_parent($super_column);
         $slice = $this->create_slice_predicate(
@@ -141,25 +143,26 @@ class SuperColumnFamily extends AbstractColumnFamily {
      * @param mixed $key_start fetch rows with a key >= this
      * @param mixed $key_finish fetch rows with a key <= this
      * @param int $row_count limit the number of rows returned to this amount
-     * @param \phpcassa\ColumnSlice a slice of subcolumns to fetch, or null
+     * @param ColumnSlice $column_slice a slice of subcolumns to fetch, or null
      * @param mixed[] $column_names limit the subcolumns fetched to this list
-     * @param ConsistencyLevel $consistency_level affects the guaranteed
+     * @param int $consistency_level affects the guaranteed
      *        number of nodes that must respond before the operation returns
      * @param int $buffer_size When calling `get_range`, the intermediate results need
      *        to be buffered if we are fetching many rows, otherwise the Cassandra
      *        server will overallocate memory and fail.  This is the size of
      *        that buffer in number of rows.
      *
-     * @return phpcassa\Iterator\RangeColumnFamilyIterator
+     * @return RangeColumnFamilyIterator
      */
     public function get_super_column_range($super_column,
-                                           $key_start="",
-                                           $key_finish="",
-                                           $row_count=self::DEFAULT_ROW_COUNT,
-                                           $column_slice=null,
-                                           $column_names=null,
-                                           $consistency_level=null,
-                                           $buffer_size=null) {
+                                           $key_start = "",
+                                           $key_finish = "",
+                                           $row_count = self::DEFAULT_ROW_COUNT,
+                                           $column_slice = null,
+                                           $column_names = null,
+                                           $consistency_level = null,
+                                           $buffer_size = null)
+    {
 
         $cp = $this->create_column_parent($super_column);
         $slice = $this->create_slice_predicate($column_names, $column_slice, false);
@@ -185,11 +188,13 @@ class SuperColumnFamily extends AbstractColumnFamily {
      * @param mixed $super_column the super column to use
      * @param mixed $column the column name of the counter
      * @param int $value the amount to adjust the counter by
-     * @param ConsistencyLevel $consistency_level affects the guaranteed
+     * @param int $consistency_level affects the guaranteed
      *        number of nodes that must respond before the operation returns
+     * @return mixed
      */
-    public function add($key, $super_column, $column, $value=1,
-                        $consistency_level=null) {
+    public function add($key, $super_column, $column, $value = 1,
+                        $consistency_level = null)
+    {
         $packed_key = $this->pack_key($key);
         $cp = $this->create_column_parent($super_column);
         $counter = new CounterColumn();
@@ -207,13 +212,14 @@ class SuperColumnFamily extends AbstractColumnFamily {
      * @param mixed $super_column only remove this super column or its subcolumns
      * @param mixed[] $subcolumns the subcolumns to remove. If null, the entire
      *                            supercolumn will be removed.
-     * @param ConsistencyLevel $consistency_level affects the guaranteed
+     * @param int $consistency_level affects the guaranteed
      *        number of nodes that must respond before the operation returns
      *
      * @return int the timestamp for the operation
      */
-    public function remove_super_column($key, $super_column, $subcolumns=null,
-                                        $consistency_level=null) {
+    public function remove_super_column($key, $super_column, $subcolumns = null,
+                                        $consistency_level = null)
+    {
 
         if ($subcolumns === null || count($subcolumns) == 1) {
             $cp = new ColumnPath();
@@ -247,11 +253,12 @@ class SuperColumnFamily extends AbstractColumnFamily {
      * @param mixed $super_column the super column the counter is in
      * @param mixed $column the column name of the counter; if left as null,
      *                      the entire super column will be removed
-     * @param ConsistencyLevel $consistency_level affects the guaranteed
+     * @param int $consistency_level affects the guaranteed
      *        number of nodes that must respond before the operation returns
      */
-    public function remove_counter($key, $super_column, $column=null,
-                                   $consistency_level=null) {
+    public function remove_counter($key, $super_column, $column = null,
+                                   $consistency_level = null)
+    {
         $cp = new ColumnPath();
         $packed_key = $this->pack_key($key);
         $cp->column_family = $this->column_family;
@@ -262,12 +269,13 @@ class SuperColumnFamily extends AbstractColumnFamily {
             $this->wcl($consistency_level));
     }
 
-    protected function dict_to_coscs($data, $timestamp, $ttl) {
+    protected function dict_to_coscs($data, $timestamp, $ttl)
+    {
         $have_counters = $this->has_counters;
         $ret = array();
         foreach ($data as $name => $value) {
             $cosc = new ColumnOrSuperColumn();
-            if($have_counters) {
+            if ($have_counters) {
                 $sub = new CounterSuperColumn();
                 $cosc->counter_super_column = $sub;
             } else {
@@ -282,31 +290,11 @@ class SuperColumnFamily extends AbstractColumnFamily {
         return $ret;
     }
 
-    protected function array_to_coscs($data, $timestamp, $ttl) {
-        $have_counters = $this->has_counters;
+    protected function dict_to_columns($array, $timestamp, $ttl)
+    {
         $ret = array();
-        foreach ($data as $supercol) {
-            list($name, $columns) = $supercol;
-            $cosc = new ColumnOrSuperColumn();
-            if($have_counters) {
-                $sub = new CounterSuperColumn();
-                $cosc->counter_super_column = $sub;
-            } else {
-                $sub = new SuperColumn();
-                $cosc->super_column = $sub;
-            }
-            $sub->name = $this->pack_name($name, true, self::NON_SLICE, false);
-            $sub->columns = $this->array_to_columns($columns, $timestamp, $ttl);
-            $ret[] = $cosc;
-        }
-
-        return $ret;
-    }
-
-    protected function dict_to_columns($array, $timestamp, $ttl) {
-        $ret = array();
-        foreach($array as $name => $value) {
-            if($this->has_counters) {
+        foreach ($array as $name => $value) {
+            if ($this->has_counters) {
                 $column = new CounterColumn();
             } else {
                 $column = new Column();
@@ -321,11 +309,34 @@ class SuperColumnFamily extends AbstractColumnFamily {
         return $ret;
     }
 
-    protected function array_to_columns($array, $timestamp, $ttl) {
+    protected function array_to_coscs($data, $timestamp, $ttl)
+    {
+        $have_counters = $this->has_counters;
         $ret = array();
-        foreach($array as $col) {
+        foreach ($data as $supercol) {
+            list($name, $columns) = $supercol;
+            $cosc = new ColumnOrSuperColumn();
+            if ($have_counters) {
+                $sub = new CounterSuperColumn();
+                $cosc->counter_super_column = $sub;
+            } else {
+                $sub = new SuperColumn();
+                $cosc->super_column = $sub;
+            }
+            $sub->name = $this->pack_name($name, true, self::NON_SLICE, false);
+            $sub->columns = $this->array_to_columns($columns, $timestamp, $ttl);
+            $ret[] = $cosc;
+        }
+
+        return $ret;
+    }
+
+    protected function array_to_columns($array, $timestamp, $ttl)
+    {
+        $ret = array();
+        foreach ($array as $col) {
             list($name, $value) = $col;
-            if($this->has_counters) {
+            if ($this->has_counters) {
                 $column = new CounterColumn();
             } else {
                 $column = new Column();
@@ -340,28 +351,29 @@ class SuperColumnFamily extends AbstractColumnFamily {
         return $ret;
     }
 
-    protected function coscs_to_dict($array_of_coscs) {
+    protected function coscs_to_dict($array_of_coscs)
+    {
         $ret = array();
         $first = $array_of_coscs[0];
-        if($first->column) { // normal columns
-            foreach($array_of_coscs as $cosc) {
+        if ($first->column) { // normal columns
+            foreach ($array_of_coscs as $cosc) {
                 $name = $this->unpack_name($cosc->column->name, false);
                 $value = $this->unpack_value($cosc->column->value, $cosc->column->name);
                 $ret[$name] = $value;
             }
-        } else if($first->super_column) { // super columns
-            foreach($array_of_coscs as $cosc) {
+        } else if ($first->super_column) { // super columns
+            foreach ($array_of_coscs as $cosc) {
                 $name = $this->unpack_name($cosc->super_column->name, true);
                 $columns = $cosc->super_column->columns;
                 $ret[$name] = $this->columns_to_dict($columns, false);
             }
         } else if ($first->counter_column) {
-            foreach($array_of_coscs as $cosc) {
+            foreach ($array_of_coscs as $cosc) {
                 $name = $this->unpack_name($cosc->counter_column->name, false);
                 $ret[$name] = $cosc->counter_column->value;
             }
         } else { // counter_super_column
-            foreach($array_of_coscs as $cosc) {
+            foreach ($array_of_coscs as $cosc) {
                 $name = $this->unpack_name($cosc->counter_super_column->name, true);
                 $columns = $cosc->counter_super_column->columns;
                 $ret[$name] = $this->columns_to_dict($columns, true);
@@ -370,28 +382,47 @@ class SuperColumnFamily extends AbstractColumnFamily {
         return $ret;
     }
 
-    protected function coscs_to_array($array_of_coscs) {
+    protected function columns_to_dict($columns, $have_counters)
+    {
+        $ret = array();
+        if (!$have_counters) {
+            foreach ($columns as $c) {
+                $value = $this->unpack_value($c->value, $c->name);
+                $name = $this->unpack_name($c->name, false);
+                $ret[$name] = $value;
+            }
+        } else {
+            foreach ($columns as $c) {
+                $name = $this->unpack_name($c->name, false);
+                $ret[$name] = $c->value;
+            }
+        }
+        return $ret;
+    }
+
+    protected function coscs_to_array($array_of_coscs)
+    {
         $ret = array();
         $first = $array_of_coscs[0];
-        if($first->column) { // normal columns
-            foreach($array_of_coscs as $cosc) {
+        if ($first->column) { // normal columns
+            foreach ($array_of_coscs as $cosc) {
                 $name = $this->unpack_name($cosc->column->name, false, false);
                 $value = $this->unpack_value($cosc->column->value, $cosc->column->name);
                 $ret[] = array($name, $value);
             }
-        } else if($first->super_column) { // super columns
-            foreach($array_of_coscs as $cosc) {
+        } else if ($first->super_column) { // super columns
+            foreach ($array_of_coscs as $cosc) {
                 $name = $this->unpack_name($cosc->super_column->name, true, false);
                 $columns = $cosc->super_column->columns;
                 $ret[] = array($name, $this->columns_to_array($columns, false));
             }
         } else if ($first->counter_column) {
-            foreach($array_of_coscs as $cosc) {
+            foreach ($array_of_coscs as $cosc) {
                 $name = $this->unpack_name($cosc->counter_column->name, false, false);
                 $ret[] = array($name, $cosc->counter_column->value);
             }
         } else { // counter_super_column
-            foreach($array_of_coscs as $cosc) {
+            foreach ($array_of_coscs as $cosc) {
                 $name = $this->unpack_name($cosc->counter_super_column->name, true, false);
                 $columns = $cosc->counter_super_column->columns;
                 $ret[] = array($name, $this->columns_to_array($columns, true));
@@ -400,90 +431,76 @@ class SuperColumnFamily extends AbstractColumnFamily {
         return $ret;
     }
 
-    protected function unpack_coscs_attrs($array_of_coscs) {
+    protected function columns_to_array($columns, $have_counters)
+    {
+        $ret = array();
+        if (!$have_counters) {
+            foreach ($columns as $c) {
+                $value = $this->unpack_value($c->value, $c->name);
+                $name = $this->unpack_name($c->name, false, false);
+                $ret[] = array($name, $value);
+            }
+        } else {
+            foreach ($columns as $c) {
+                $name = $this->unpack_name($c->name, false, false);
+                $ret[] = array($name, $c->value);
+            }
+        }
+        return $ret;
+    }
+
+    protected function unpack_coscs_attrs($array_of_coscs)
+    {
         $ret = array();
         $first = $array_of_coscs[0];
-        if($first->column) { // normal columns
-            foreach($array_of_coscs as $cosc) {
+        if ($first->column) { // normal columns
+            foreach ($array_of_coscs as $cosc) {
                 $col = $cosc->column;
                 $col->value = $this->unpack_value($col->value, $col->name);
                 $col->name = $this->unpack_name($col->name, false, false);
                 $ret[] = $col;
             }
-        } else if($first->super_column) { // super columns
-            foreach($array_of_coscs as $cosc) {
+        } else if ($first->super_column) { // super columns
+            foreach ($array_of_coscs as $cosc) {
                 $supercol = $cosc->super_column;
                 $supercol->name = $this->unpack_name(
-                        $supercol->name, true, false);
+                    $supercol->name, true, false);
                 $supercol->columns = $this->unpack_subcolumn_attrs(
-                        $supercol->columns, false);
+                    $supercol->columns, false);
                 $ret[] = $supercol;
             }
         } else if ($first->counter_column) {
-            foreach($array_of_coscs as $cosc) {
+            foreach ($array_of_coscs as $cosc) {
                 $col = $cosc->counter_column;
                 $col->name = $this->unpack_name($col->name, false, false);
                 $ret[] = $col;
             }
         } else { // counter_super_column
-            foreach($array_of_coscs as $cosc) {
+            foreach ($array_of_coscs as $cosc) {
                 $supercol = $cosc->super_column;
                 $supercol->name = $this->unpack_name(
-                        $supercol->name, true, false);
+                    $supercol->name, true, false);
                 $supercol->columns = $this->unpack_subcolumn_attrs(
-                        $supercol->columns, true);
+                    $supercol->columns, true);
                 $ret[] = $supercol;
             }
         }
         return $ret;
     }
 
-    protected function unpack_subcolumn_attrs($columns, $have_counters) {
+    protected function unpack_subcolumn_attrs($columns, $have_counters)
+    {
         $ret = array();
         if (!$have_counters) {
-            foreach($columns as $c) {
+            foreach ($columns as $c) {
                 $c->value = $this->unpack_value($c->value, $c->name);
                 $c->name = $this->unpack_name($c->name, false, false);
                 $ret[] = $c;
             }
         } else {
-            foreach($columns as $c) {
+            foreach ($columns as $c) {
                 $c->name = $this->unpack_name($c->name, false, false);
                 $ret[] = $c;
-            }
-        }
-        return $ret;
-    }
-
-    protected function columns_to_dict($columns, $have_counters) {
-        $ret = array();
-        if (!$have_counters) {
-            foreach($columns as $c) {
-                $value = $this->unpack_value($c->value, $c->name);
-                $name  = $this->unpack_name($c->name, false);
-                $ret[$name] = $value;
-            }
-        } else {
-            foreach($columns as $c) {
-                $name = $this->unpack_name($c->name, false);
-                $ret[$name] = $c->value;
-            }
-        }
-        return $ret;
-    }
-
-    protected function columns_to_array($columns, $have_counters) {
-        $ret = array();
-        if (!$have_counters) {
-            foreach($columns as $c) {
-                $value = $this->unpack_value($c->value, $c->name);
-                $name  = $this->unpack_name($c->name, false, false);
-                $ret[] = array($name, $value);
-            }
-        } else {
-            foreach($columns as $c) {
-                $name = $this->unpack_name($c->name, false, false);
-                $ret[] = array($name, $c->value);
             }
         }
         return $ret;

@@ -1,21 +1,20 @@
 <?php
 
-use phpcassa\Connection\ConnectionPool;
-use phpcassa\SystemManager;
 use phpcassa\ColumnFamily;
+use phpcassa\Connection\ConnectionPool;
 use phpcassa\Schema\DataType;
+use phpcassa\SystemManager;
 
-use cassandra\NotFoundException;
+class TestCounterColumnFamily extends PHPUnit_Framework_TestCase
+{
 
-class TestCounterColumnFamily extends PHPUnit_Framework_TestCase {
-
+    private static $KS = "TestCounterColumnFamily";
     private $pool;
     private $cf;
     private $sys;
 
-    private static $KS = "TestCounterColumnFamily";
-
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         try {
             $sys = new SystemManager();
 
@@ -31,27 +30,31 @@ class TestCounterColumnFamily extends PHPUnit_Framework_TestCase {
                 $sys->create_column_family(self::$KS, 'Counter1', $cfattrs);
             }
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             print($e);
             throw $e;
         }
     }
 
-    public static function tearDownAfterClass() {
+    public static function tearDownAfterClass()
+    {
         $sys = new SystemManager();
         $sys->drop_keyspace(self::$KS);
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->pool = new ConnectionPool(self::$KS);
         $this->cf = new ColumnFamily($this->pool, 'Counter1');
     }
 
-    public function tearDown() {
+    public function tearDown()
+    {
         $this->pool->dispose();
     }
 
-    public function test_add() {
+    public function test_add()
+    {
         $key = "test_add";
         $this->cf->add($key, "col");
         $result = $this->cf->get($key, null, array("col"));
@@ -66,7 +69,8 @@ class TestCounterColumnFamily extends PHPUnit_Framework_TestCase {
         $this->assertEquals($result, array("col" => 3, "col2" => 5));
     }
 
-    public function test_remove_counter() {
+    public function test_remove_counter()
+    {
         $key = "test_remove_counter";
         $this->cf->add($key, "col");
         $result = $this->cf->get($key, null, array("col"));

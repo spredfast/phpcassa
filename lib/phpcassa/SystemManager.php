@@ -1,13 +1,12 @@
 <?php
 namespace phpcassa;
 
-use phpcassa\Connection\ConnectionWrapper;
-use phpcassa\Schema\DataType;
-
-use cassandra\KsDef;
 use cassandra\CfDef;
 use cassandra\ColumnDef;
 use cassandra\IndexType;
+use cassandra\KsDef;
+use phpcassa\Connection\ConnectionWrapper;
+use phpcassa\Schema\DataType;
 
 /**
  * Helps with getting information about the schema, making
@@ -16,7 +15,8 @@ use cassandra\IndexType;
  *
  * @package phpcassa
  */
-class SystemManager {
+class SystemManager
+{
 
     /** @internal */
     const KEEP = "<__keep__>";
@@ -30,10 +30,10 @@ class SystemManager {
      * @param int $send_timeout the socket send timeout in milliseconds. Defaults to 15000.
      * @param int $recv_timeout the socket receive timeout in milliseconds. Defaults to 15000.
      */
-    public function __construct($server='localhost:9160',
-                                $credentials=NULL,
-                                $send_timeout=15000,
-                                $recv_timeout=15000)
+    public function __construct($server = 'localhost:9160',
+                                $credentials = NULL,
+                                $send_timeout = 15000,
+                                $recv_timeout = 15000)
     {
         $this->conn = new ConnectionWrapper(
             NULL, $server, $credentials, True,
@@ -41,20 +41,18 @@ class SystemManager {
         $this->client = $this->conn->client;
     }
 
+    protected static function endswith($haystack, $needle)
+    {
+        $start = strlen($needle) * -1; //negative
+        return (substr($haystack, $start) === $needle);
+    }
+
     /**
      * Closes the underlying Thrift connection.
      */
-    public function close() {
+    public function close()
+    {
         $this->conn->close();
-    }
-
-    protected function wait_for_agreement() {
-        while (true) {
-            $versions = $this->client->describe_schema_versions();
-            if (count($versions) == 1)
-                break;
-            usleep(500);
-        }
     }
 
     /**
@@ -81,52 +79,15 @@ class SystemManager {
      *        factor of 1 and no strategy options.
      *
      */
-    public function create_keyspace($keyspace, $attrs) {
+    public function create_keyspace($keyspace, $attrs)
+    {
         $ksdef = $this->make_ksdef($keyspace, $attrs);
         $this->client->system_add_keyspace($ksdef);
         $this->wait_for_agreement();
     }
 
-    /**
-     * Modifies a keyspace's properties.
-     *
-     * Example usage:
-     * <code>
-     * $sys = SystemManager();
-     * $attrs = array("replication_factor" => 2);
-     * $sys->alter_keyspace("Keyspace1", $attrs);
-     * </code>
-     *
-     * @param string $keyspace the keyspace to modify
-     * @param array $attrs an array that maps attribute
-     *        names to values. Valid attribute names include
-     *        "strategy_class", "strategy_options", and
-     *        "replication_factor".
-     *
-     */
-    public function alter_keyspace($keyspace, $attrs) {
-        $ksdef = $this->client->describe_keyspace($keyspace);
-        $ksdef = $this->make_ksdef($keyspace, $attrs, $ksdef);
-        $this->client->system_update_keyspace($ksdef);
-        $this->wait_for_agreement();
-    }
-
-    /*
-     * Drops a keyspace.
-     *
-     * @param string $keyspace the keyspace name
-     */
-    public function drop_keyspace($keyspace) {
-        $this->client->system_drop_keyspace($keyspace);
-        $this->wait_for_agreement();
-    }
-
-    protected static function endswith($haystack, $needle) {
-        $start  = strlen($needle) * -1; //negative
-        return (substr($haystack, $start) === $needle);
-    }
-
-    protected function make_ksdef($name, $attrs, $orig=NULL) {
+    protected function make_ksdef($name, $attrs, $orig = NULL)
+    {
         if ($orig !== NULL) {
             $ksdef = $orig;
         } else {
@@ -149,6 +110,53 @@ class SystemManager {
         return $ksdef;
     }
 
+    /*
+     * Drops a keyspace.
+     *
+     * @param string $keyspace the keyspace name
+     */
+
+    protected function wait_for_agreement()
+    {
+        while (true) {
+            $versions = $this->client->describe_schema_versions();
+            if (count($versions) == 1)
+                break;
+            usleep(500);
+        }
+    }
+
+    /**
+     * Modifies a keyspace's properties.
+     *
+     * Example usage:
+     * <code>
+     * $sys = SystemManager();
+     * $attrs = array("replication_factor" => 2);
+     * $sys->alter_keyspace("Keyspace1", $attrs);
+     * </code>
+     *
+     * @param string $keyspace the keyspace to modify
+     * @param array $attrs an array that maps attribute
+     *        names to values. Valid attribute names include
+     *        "strategy_class", "strategy_options", and
+     *        "replication_factor".
+     *
+     */
+    public function alter_keyspace($keyspace, $attrs)
+    {
+        $ksdef = $this->client->describe_keyspace($keyspace);
+        $ksdef = $this->make_ksdef($keyspace, $attrs, $ksdef);
+        $this->client->system_update_keyspace($ksdef);
+        $this->wait_for_agreement();
+    }
+
+    public function drop_keyspace($keyspace)
+    {
+        $this->client->system_drop_keyspace($keyspace);
+        $this->wait_for_agreement();
+    }
+
     /**
      * Creates a column family.
      *
@@ -166,7 +174,8 @@ class SystemManager {
      * @param array $attrs an array that maps attribute
      *        names to values.
      */
-    public function create_column_family($keyspace, $column_family, $attrs=null) {
+    public function create_column_family($keyspace, $column_family, $attrs = null)
+    {
         if ($attrs === null)
             $attrs = array();
 
@@ -176,17 +185,8 @@ class SystemManager {
         $this->wait_for_agreement();
     }
 
-    protected function get_cfdef($ksname, $cfname) {
-        $ksdef = $this->client->describe_keyspace($ksname);
-        $cfdefs = $ksdef->cf_defs;
-        foreach($cfdefs as $cfdef) {
-            if ($cfdef->name == $cfname)
-                return $cfdef;
-        }
-        return;
-    }
-
-    protected function make_cfdef($ksname, $cfname, $attrs, $orig=NULL) {
+    protected function make_cfdef($ksname, $cfname, $attrs, $orig = NULL)
+    {
         if ($orig !== NULL) {
             $cfdef = $orig;
         } else {
@@ -218,12 +218,24 @@ class SystemManager {
      * @param array $attrs an array that maps attribute
      *        names to values.
      */
-    public function alter_column_family($keyspace, $column_family, $attrs) {
+    public function alter_column_family($keyspace, $column_family, $attrs)
+    {
         $cfdef = $this->get_cfdef($keyspace, $column_family);
         $cfdef = $this->make_cfdef($keyspace, $column_family, $attrs, $cfdef);
         $this->client->set_keyspace($cfdef->keyspace);
         $this->client->system_update_column_family($cfdef);
         $this->wait_for_agreement();
+    }
+
+    protected function get_cfdef($ksname, $cfname)
+    {
+        $ksdef = $this->client->describe_keyspace($ksname);
+        $cfdefs = $ksdef->cf_defs;
+        foreach ($cfdefs as $cfdef) {
+            if ($cfdef->name == $cfname)
+                return $cfdef;
+        }
+        return null;
     }
 
     /*
@@ -232,7 +244,9 @@ class SystemManager {
      * @param string $keyspace the keyspace the CF is in
      * @param string $column_family the column family name
      */
-    public function drop_column_family($keyspace, $column_family) {
+
+    public function drop_column_family($keyspace, $column_family)
+    {
         $this->client->set_keyspace($keyspace);
         $this->client->system_drop_column_family($column_family);
         $this->wait_for_agreement();
@@ -258,7 +272,8 @@ class SystemManager {
      * @param string $keyspace the keyspace the CF is in
      * @param string $column_family the column family name
      */
-    public function truncate_column_family($keyspace, $column_family) {
+    public function truncate_column_family($keyspace, $column_family)
+    {
         $this->client->set_keyspace($keyspace);
         $this->client->truncate($column_family);
     }
@@ -278,66 +293,19 @@ class SystemManager {
      * @param string $column the name of the column to put the index on
      * @param string $data_type the data type of the values being indexed
      * @param string $index_name an optional name for the index
-     * @param IndexType $index_type the type of index. Defaults to
-     *        \cassandra\IndexType::KEYS_INDEX, which is currently the only option.
+     * @param IndexType|int $index_type the type of index. Defaults to
+     *        IndexType::KEYS_INDEX, which is currently the only option.
      */
     public function create_index($keyspace, $column_family, $column,
-        $data_type=self::KEEP, $index_name=NULL, $index_type=IndexType::KEYS)
+                                 $data_type = self::KEEP, $index_name = NULL, $index_type = IndexType::KEYS)
     {
         $this->_alter_column($keyspace, $column_family, $column,
-            $data_type=$data_type, $index_type=$index_type, $index_name=$index_name);
-    }
-
-    /**
-     * Drop an index from a column family.
-     *
-     * Example usage:
-     *
-     * <code>
-     * $sys = new SystemManager();
-     * $sys->drop_index("Keyspace1", "Users", "name");
-     * </code>
-     *
-     * @param string $keyspace the name of the keyspace containing the column family
-     * @param string $column_family the name of the column family
-     * @param string $column the name of the column to drop the index from
-     */
-    public function drop_index($keyspace, $column_family, $column) {
-        $this->_alter_column($keyspace, $column_family, $column,
-            $data_type=self::KEEP, $index_type=NULL, $index_name=NULL);
-    }
-
-    /**
-     * Changes or sets the validation class of a single column.
-     *
-     * Example usage:
-     *
-     * <code>
-     * $sys = new SystemManager();
-     * $sys->alter_column("Keyspace1", "Users", "name", "UTF8Type");
-     * </code>
-     *
-     * @param string $keyspace the name of the keyspace containing the column family
-     * @param string $column_family the name of the column family
-     * @param string $column the name of the column to put the index on
-     * @param string $data_type the data type of the values being indexed
-     */
-    public function alter_column($keyspace, $column_family, $column, $data_type) {
-        $this->_alter_column($keyspace, $column_family, $column, $data_type);
-    }
-
-    protected static function qualify_class_name($data_type) {
-        if ($data_type === null)
-            return null;
-
-        if (strpos($data_type, ".") === false)
-            return "org.apache.cassandra.db.marshal.$data_type";
-        else
-            return $data_type;
+            $data_type = $data_type, $index_type = $index_type, $index_name = $index_name);
     }
 
     protected function _alter_column($keyspace, $column_family, $column,
-        $data_type=self::KEEP, $index_type=self::KEEP, $index_name=self::KEEP) {
+                                     $data_type = self::KEEP, $index_type = self::KEEP, $index_name = self::KEEP)
+    {
 
         $this->client->set_keyspace($keyspace);
         $cfdef = $this->get_cfdef($keyspace, $column_family);
@@ -377,12 +345,65 @@ class SystemManager {
         $this->wait_for_agreement();
     }
 
+    protected static function qualify_class_name($data_type)
+    {
+        if ($data_type === null)
+            return null;
+
+        if (strpos($data_type, ".") === false)
+            return "org.apache.cassandra.db.marshal.$data_type";
+        else
+            return $data_type;
+    }
+
+    /**
+     * Drop an index from a column family.
+     *
+     * Example usage:
+     *
+     * <code>
+     * $sys = new SystemManager();
+     * $sys->drop_index("Keyspace1", "Users", "name");
+     * </code>
+     *
+     * @param string $keyspace the name of the keyspace containing the column family
+     * @param string $column_family the name of the column family
+     * @param string $column the name of the column to drop the index from
+     */
+    public function drop_index($keyspace, $column_family, $column)
+    {
+        $this->_alter_column($keyspace, $column_family, $column,
+            $data_type = self::KEEP, $index_type = NULL, $index_name = NULL);
+    }
+
+    /**
+     * Changes or sets the validation class of a single column.
+     *
+     * Example usage:
+     *
+     * <code>
+     * $sys = new SystemManager();
+     * $sys->alter_column("Keyspace1", "Users", "name", "UTF8Type");
+     * </code>
+     *
+     * @param string $keyspace the name of the keyspace containing the column family
+     * @param string $column_family the name of the column family
+     * @param string $column the name of the column to put the index on
+     * @param string $data_type the data type of the values being indexed
+     */
+    public function alter_column($keyspace, $column_family, $column, $data_type)
+    {
+        $this->_alter_column($keyspace, $column_family, $column, $data_type);
+    }
+
     /**
      * Describes the Cassandra cluster.
      *
+     * @param $keyspace
      * @return array the node to token mapping
      */
-    public function describe_ring($keyspace) {
+    public function describe_ring($keyspace)
+    {
         return $this->client->describe_ring($keyspace);
     }
 
@@ -391,7 +412,8 @@ class SystemManager {
      *
      * @return string the cluster name
      */
-    public function describe_cluster_name() {
+    public function describe_cluster_name()
+    {
         return $this->client->describe_cluster_name();
     }
 
@@ -402,7 +424,8 @@ class SystemManager {
      *
      * @return string the API version
      */
-    public function describe_version() {
+    public function describe_version()
+    {
         return $this->client->describe_version();
     }
 
@@ -412,7 +435,8 @@ class SystemManager {
      *
      * @return array a mapping of schema versions to nodes.
      */
-    public function describe_schema_versions() {
+    public function describe_schema_versions()
+    {
         return $this->client->describe_schema_versions();
     }
 
@@ -421,7 +445,8 @@ class SystemManager {
      *
      * @return string the name of the partitioner in use
      */
-    public function describe_partitioner() {
+    public function describe_partitioner()
+    {
         return $this->client->describe_partitioner();
     }
 
@@ -430,7 +455,8 @@ class SystemManager {
      *
      * @return string the name of the snitch in use
      */
-    public function describe_snitch() {
+    public function describe_snitch()
+    {
         return $this->client->describe_snitch();
     }
 
@@ -443,7 +469,8 @@ class SystemManager {
      *
      * @return cassandra\KsDef
      */
-    public function describe_keyspace($keyspace) {
+    public function describe_keyspace($keyspace)
+    {
         return $this->client->describe_keyspace($keyspace);
     }
 
@@ -452,7 +479,8 @@ class SystemManager {
      *
      * @return array an array of cassandra\KsDef
      */
-    public function describe_keyspaces() {
+    public function describe_keyspaces()
+    {
         return $this->client->describe_keyspaces();
     }
 }

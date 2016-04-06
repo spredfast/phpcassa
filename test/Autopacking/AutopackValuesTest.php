@@ -1,17 +1,18 @@
 <?php
-require_once(__DIR__.'/AutopackBase.php');
+require_once(__DIR__ . '/AutopackBase.php');
 
-use phpcassa\Connection\ConnectionPool;
 use phpcassa\ColumnFamily;
+use phpcassa\Connection\ConnectionPool;
 use phpcassa\Schema\DataType;
 use phpcassa\Schema\DataType\IntegerType;
 use phpcassa\SystemManager;
-
 use phpcassa\UUID;
 
-class AutopackValuesTest extends AutopackBase {
+class AutopackValuesTest extends AutopackBase
+{
 
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         parent::setUpBeforeClass();
         $sys = new SystemManager();
         $cfattrs = array("column_type" => "Standard");
@@ -40,20 +41,25 @@ class AutopackValuesTest extends AutopackBase {
         $sys->alter_column(self::$KS, 'CompositeNames', array(0, 'meta'), 'AsciiType');
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->client = new ConnectionPool(self::$KS);
     }
 
-    public function tearDown() { }
+    public function tearDown()
+    {
+    }
 
-    public function test_longs() {
+    public function test_longs()
+    {
         $this->cf_valid_long = new ColumnFamily($this->client, 'ValidatorLong');
         $col = array('subcol' => 222222222222);
         $this->cf_valid_long->insert(self::$KEYS[0], $col);
         $this->assertEquals($col, $this->cf_valid_long->get(self::$KEYS[0]));
     }
 
-    public function test_time_uuids() {
+    public function test_time_uuids()
+    {
         $time = UUID::mint();
         $this->cf_valid_time = new ColumnFamily($this->client, 'ValidatorTime');
         $col = array('subcol' => $time);
@@ -61,14 +67,16 @@ class AutopackValuesTest extends AutopackBase {
         $this->assertEquals($col, $this->cf_valid_time->get(self::$KEYS[0]));
     }
 
-    public function test_bytes() {
+    public function test_bytes()
+    {
         $this->cf_valid_bytes = new ColumnFamily($this->client, 'ValidatorBytes');
         $col = array('subcol' => 'aaa123');
         $this->cf_valid_bytes->insert(self::$KEYS[0], $col);
         $this->assertEquals($col, $this->cf_valid_bytes->get(self::$KEYS[0]));
     }
 
-    public function test_composite() {
+    public function test_composite()
+    {
         $this->cf_valid_composite = new ColumnFamily($this->client, 'ValidatorComposite');
         $cols = array('subcol' => array(1, 'a'));
         $this->cf_valid_composite->insert(self::$KEYS[0], $cols);
@@ -76,7 +84,8 @@ class AutopackValuesTest extends AutopackBase {
             $this->cf_valid_composite->get(self::$KEYS[0]));
     }
 
-    public function test_default_validated_columns() {
+    public function test_default_validated_columns()
+    {
         $time = UUID::mint();
         $this->cf_def_valid = new ColumnFamily($this->client, 'DefaultValidator');
         $col_cf = array('aaaaaa' => 222222222222);
@@ -87,10 +96,11 @@ class AutopackValuesTest extends AutopackBase {
         $this->cf_def_valid->insert(self::$KEYS[0], $col_cf);
         $this->cf_def_valid->insert(self::$KEYS[0], $col_cm);
         $this->assertEquals($this->cf_def_valid->get(self::$KEYS[0]),
-                          array('aaaaaa' => 222222222222, 'subcol' => $time));
+            array('aaaaaa' => 222222222222, 'subcol' => $time));
     }
 
-    public function test_serialized_col_name_validators() {
+    public function test_serialized_col_name_validators()
+    {
         $cf = new ColumnFamily($this->client, 'CompositeNames');
 
         $columns = array(
@@ -102,7 +112,8 @@ class AutopackValuesTest extends AutopackBase {
         $this->assertEquals($columns, $cf->get('key'));
     }
 
-    public function test_integer_type() {
+    public function test_integer_type()
+    {
         $i = new IntegerType();
         $to_test = array(
             0, 1, 2, 127, 128, 129, 255, 256, 257, 65535, 65536, 65537,

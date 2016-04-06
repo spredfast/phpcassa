@@ -2,22 +2,21 @@
 
 use phpcassa\ColumnSlice;
 use phpcassa\Connection\ConnectionPool;
-use phpcassa\SystemManager;
-use phpcassa\SuperColumnFamily;
 use phpcassa\Schema\DataType;
+use phpcassa\SuperColumnFamily;
+use phpcassa\SystemManager;
 
-use cassandra\NotFoundException;
+class TestSuperColumnFamily extends PHPUnit_Framework_TestCase
+{
 
-class TestSuperColumnFamily extends PHPUnit_Framework_TestCase {
-
+    private static $KEYS = array('key1', 'key2', 'key3');
+    private static $KS = "TestSuperColumnFamily";
     private $pool;
     private $cf;
     private $sys;
 
-    private static $KEYS = array('key1', 'key2', 'key3');
-    private static $KS = "TestSuperColumnFamily";
-
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         $sys = new SystemManager();
 
         $ksdefs = $sys->describe_keyspaces();
@@ -37,27 +36,31 @@ class TestSuperColumnFamily extends PHPUnit_Framework_TestCase {
         $sys->close();
     }
 
-    public static function tearDownAfterClass() {
+    public static function tearDownAfterClass()
+    {
         $sys = new SystemManager();
         $sys->drop_keyspace(self::$KS);
         $sys->close();
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->pool = new ConnectionPool(self::$KS);
         $this->cf = new SuperColumnFamily($this->pool, 'Super1');
     }
 
-    public function tearDown() {
-        foreach(self::$KEYS as $key) {
+    public function tearDown()
+    {
+        foreach (self::$KEYS as $key) {
             $this->cf->remove($key);
         }
         $this->pool->dispose();
     }
 
-    public function test_get() {
+    public function test_get()
+    {
         $columns = array(1 => array('sub1' => 'val1', 'sub2' => 'val2'),
-                         2 => array('sub3' => 'val3', 'sub3' => 'val3'));
+            2 => array('sub3' => 'val3', 'sub3' => 'val3'));
 
         $this->setExpectedException('\cassandra\NotFoundException');
         $this->cf->get(self::$KEYS[0]);
@@ -67,23 +70,17 @@ class TestSuperColumnFamily extends PHPUnit_Framework_TestCase {
         $this->assertEquals(
             $this->cf->multiget(array(self::$KEYS[0])), null,
             array(self::$KEYS[0] => $columns));
-        $response = $this->cf->get_range($start_key=self::$KEYS[0],
-                                         $finish_key=self::$KEYS[0]);
-        foreach($response as $key => $cols) {
+        $response = $this->cf->get_range($start_key = self::$KEYS[0],
+            $finish_key = self::$KEYS[0]);
+        foreach ($response as $key => $cols) {
             #should only be one row
             $this->assertEquals($key, self::$KEYS[0]);
             $this->assertEquals($cols, $columns);
         }
     }
 
-    private function insert_supers() {
-        $sub12 = array('sub1' => 'val1', 'sub2' => 'val2');
-        $sub34 = array('sub3' => 'val3', 'sub4' => 'val4');
-        $cols = array(1 => $sub12, 2 => $sub34);
-        $this->cf->insert(self::$KEYS[0], $cols);
-    }
-
-    public function test_get_super_column() {
+    public function test_get_super_column()
+    {
         $this->insert_supers();
         $sub12 = array('sub1' => 'val1', 'sub2' => 'val2');
 
@@ -107,7 +104,16 @@ class TestSuperColumnFamily extends PHPUnit_Framework_TestCase {
         $this->cf->get_super_column(self::$KEYS[0], 3);
     }
 
-    public function test_multiget_super_column() {
+    private function insert_supers()
+    {
+        $sub12 = array('sub1' => 'val1', 'sub2' => 'val2');
+        $sub34 = array('sub3' => 'val3', 'sub4' => 'val4');
+        $cols = array(1 => $sub12, 2 => $sub34);
+        $this->cf->insert(self::$KEYS[0], $cols);
+    }
+
+    public function test_multiget_super_column()
+    {
         $this->insert_supers();
         $sub12 = array('sub1' => 'val1', 'sub2' => 'val2');
 
@@ -128,13 +134,14 @@ class TestSuperColumnFamily extends PHPUnit_Framework_TestCase {
             array(self::$KEYS[0] => array('sub2' => 'val2')));
     }
 
-    public function test_get_super_column_range() {
+    public function test_get_super_column_range()
+    {
         $this->insert_supers();
         $sub12 = array('sub1' => 'val1', 'sub2' => 'val2');
 
         $key = self::$KEYS[0];
         $response = $this->cf->get_super_column_range(1, $key, $key);
-        foreach($response as $res_key => $cols) {
+        foreach ($response as $res_key => $cols) {
             #should only be one row
             $this->assertEquals($res_key, $key);
             $this->assertEquals($cols, $sub12);
@@ -143,7 +150,7 @@ class TestSuperColumnFamily extends PHPUnit_Framework_TestCase {
         // specify a slice of subcolumns to fetch
         $slice = new ColumnSlice('sub2', 'sub2');
         $response = $this->cf->get_super_column_range(1, $key, $key, 10, $slice);
-        foreach($response as $res_key => $cols) {
+        foreach ($response as $res_key => $cols) {
             $this->assertEquals($res_key, $key);
             $this->assertEquals($cols, array('sub2' => 'val2'));
         }
@@ -151,13 +158,14 @@ class TestSuperColumnFamily extends PHPUnit_Framework_TestCase {
         // specify a set of subcolumns names to fetch
         $subcols = array('sub2');
         $response = $this->cf->get_super_column_range(1, $key, $key, 10, null, $subcols);
-        foreach($response as $res_key => $cols) {
+        foreach ($response as $res_key => $cols) {
             $this->assertEquals($res_key, $key);
             $this->assertEquals($cols, array('sub2' => 'val2'));
         }
     }
 
-    public function test_get_subcolumn_count_and_remove() {
+    public function test_get_subcolumn_count_and_remove()
+    {
         $this->insert_supers();
         $key = self::$KEYS[0];
 

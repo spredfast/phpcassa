@@ -1,14 +1,16 @@
 <?php
-require_once(__DIR__.'/SuperBase.php');
+require_once(__DIR__ . '/SuperBase.php');
 
 use phpcassa\Connection\ConnectionPool;
-use phpcassa\SuperColumnFamily;
 use phpcassa\Schema\DataType;
+use phpcassa\SuperColumnFamily;
 use phpcassa\SystemManager;
 
-class AutopackSuperColumnsTest extends SuperBase {
+class AutopackSuperColumnsTest extends SuperBase
+{
 
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         parent::setUpBeforeClass();
 
         $sys = new SystemManager();
@@ -29,30 +31,32 @@ class AutopackSuperColumnsTest extends SuperBase {
         $sys->create_column_family(self::$KS, 'SuperUTF8', $cfattrs);
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->client = new ConnectionPool(self::$KS);
 
         if (self::$have64Bit) {
-            $this->cf_suplong  = new SuperColumnFamily($this->client, 'SuperLong');
+            $this->cf_suplong = new SuperColumnFamily($this->client, 'SuperLong');
         }
-        $this->cf_supint   = new SuperColumnFamily($this->client, 'SuperInt');
+        $this->cf_supint = new SuperColumnFamily($this->client, 'SuperInt');
         $this->cf_supascii = new SuperColumnFamily($this->client, 'SuperAscii');
-        $this->cf_suputf8  = new SuperColumnFamily($this->client, 'SuperUTF8');
+        $this->cf_suputf8 = new SuperColumnFamily($this->client, 'SuperUTF8');
 
         $this->cfs = array($this->cf_supint,
-                           $this->cf_supascii, $this->cf_suputf8);
+            $this->cf_supascii, $this->cf_suputf8);
         if (self::$have64Bit) {
             $this->cfs[] = $this->cf_suplong;
         }
     }
 
-    protected function make_type_groups() {
+    protected function make_type_groups()
+    {
         $type_groups = array();
 
         if (self::$have64Bit) {
             $long_cols = array(111111111111,
-                               222222222222,
-                               333333333333);
+                222222222222,
+                333333333333);
             $type_groups[] = self::make_super_group($this->cf_suplong, $long_cols);
         }
 
@@ -62,7 +66,7 @@ class AutopackSuperColumnsTest extends SuperBase {
         $ascii_cols = array('aaaa', 'bbbb', 'cccc');
         $type_groups[] = self::make_super_group($this->cf_supascii, $ascii_cols);
 
-        $utf8_cols = array("a&#1047;", "b&#1048;", "c&#1049;"); 
+        $utf8_cols = array("a&#1047;", "b&#1048;", "c&#1049;");
         $type_groups[] = self::make_super_group($this->cf_suputf8, $utf8_cols);
 
         return $type_groups;

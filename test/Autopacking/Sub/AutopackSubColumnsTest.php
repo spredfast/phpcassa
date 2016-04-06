@@ -1,16 +1,18 @@
 <?php
-require_once(__DIR__.'/SubBase.php');
+require_once(__DIR__ . '/SubBase.php');
 
 use phpcassa\Connection\ConnectionPool;
-use phpcassa\SuperColumnFamily;
 use phpcassa\Schema\DataType;
+use phpcassa\SuperColumnFamily;
 use phpcassa\SystemManager;
 
-class AutopackSubColumnsTest extends SubBase {
+class AutopackSubColumnsTest extends SubBase
+{
 
     protected $SERIALIZED = false;
 
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         parent::setUpBeforeClass();
 
         $sys = new SystemManager();
@@ -31,34 +33,36 @@ class AutopackSubColumnsTest extends SubBase {
         $sys->create_column_family(self::$KS, 'SuperLongSubUTF8', $cfattrs);
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->client = new ConnectionPool(self::$KS);
 
         if (self::$have64Bit) {
-            $this->cf_suplong_sublong  = new SuperColumnFamily(
+            $this->cf_suplong_sublong = new SuperColumnFamily(
                 $this->client, 'SuperLongSubLong');
         }
-        $this->cf_suplong_subint   = new SuperColumnFamily(
+        $this->cf_suplong_subint = new SuperColumnFamily(
             $this->client, 'SuperLongSubInt');
         $this->cf_suplong_subascii = new SuperColumnFamily(
             $this->client, 'SuperLongSubAscii');
-        $this->cf_suplong_subutf8  = new SuperColumnFamily(
+        $this->cf_suplong_subutf8 = new SuperColumnFamily(
             $this->client, 'SuperLongSubUTF8');
 
         $this->cfs = array($this->cf_suplong_subint,
-                           $this->cf_suplong_subascii, $this->cf_suplong_subutf8);
+            $this->cf_suplong_subascii, $this->cf_suplong_subutf8);
         if (self::$have64Bit) {
             $this->cfs[] = $this->cf_suplong_sublong;
         }
     }
 
-    public function make_type_groups() {
+    public function make_type_groups()
+    {
         $type_groups = array();
 
         if (self::$have64Bit) {
             $long_cols = array(111111111111,
-                               222222222222,
-                               333333333333);
+                222222222222,
+                333333333333);
             $type_groups[] = self::make_sub_group($this->cf_suplong_sublong, $long_cols);
         }
 
@@ -68,7 +72,7 @@ class AutopackSubColumnsTest extends SubBase {
         $ascii_cols = array('aaaa', 'bbbb', 'cccc');
         $type_groups[] = self::make_sub_group($this->cf_suplong_subascii, $ascii_cols);
 
-        $utf8_cols = array("a&#1047;", "b&#1048;", "c&#1049;"); 
+        $utf8_cols = array("a&#1047;", "b&#1048;", "c&#1049;");
         $type_groups[] = self::make_sub_group($this->cf_suplong_subutf8, $utf8_cols);
 
         return $type_groups;

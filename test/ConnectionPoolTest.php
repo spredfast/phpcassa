@@ -1,37 +1,41 @@
 <?php
 
+use cassandra\CassandraClient;
+use cassandra\TimedOutException;
+use phpcassa\ColumnFamily;
+use phpcassa\Connection\ConnectionPool;
+use phpcassa\SystemManager;
 use Thrift\Protocol\TBinaryProtocolAccelerated;
 
-use phpcassa\Connection\ConnectionPool;
-use phpcassa\Connection\MaxRetriesException;
-use phpcassa\Connection\NoServerAvailable;
-use phpcassa\ColumnFamily;
-use phpcassa\SystemManager;
+class MockClient extends CassandraClient
+{
 
-use cassandra\TimedOutException;
-use cassandra\CassandraClient;
-
-class MockClient extends CassandraClient {
-
-    public function __construct($transport) {
+    public function __construct($transport)
+    {
         parent::__construct(new TBinaryProtocolAccelerated($transport));
     }
 
-    public function batch_mutate($mutation_map, $consistency_level) {
+    public function batch_mutate(array $mutation_map, $consistency_level)
+    {
         throw new TimedOutException();
     }
 }
 
-class SilentConnectionPool extends ConnectionPool {
-    protected function error_log($errorMsg, $messageType=0) { }
+class SilentConnectionPool extends ConnectionPool
+{
+    protected function error_log($errorMsg, $messageType = 0)
+    {
+    }
 }
 
-class ConnectionPoolTest extends PHPUnit_Framework_TestCase {
+class ConnectionPoolTest extends PHPUnit_Framework_TestCase
+{
 
     private static $KS = "TestPooling";
     private static $CF = "Standard1";
 
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         try {
             $sys = new SystemManager();
 
@@ -48,19 +52,21 @@ class ConnectionPoolTest extends PHPUnit_Framework_TestCase {
             $cfattrs = array("column_type" => "Standard");
             $sys->create_column_family(self::$KS, self::$CF, $cfattrs);
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             print($e);
             throw $e;
         }
     }
 
-    public static function tearDownAfterClass() {
+    public static function tearDownAfterClass()
+    {
         $sys = new SystemManager();
         $sys->drop_keyspace(self::$KS);
         $sys->close();
     }
 
-    public function test_failover_under_limit() {
+    public function test_failover_under_limit()
+    {
         $pool = new SilentConnectionPool(self::$KS, array('localhost:9160'));
         $pool->fill();
         $stats = $pool->stats();
@@ -78,7 +84,8 @@ class ConnectionPoolTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($stats['recycled'], 0);
     }
 
-    public function test_failover_over_limit() {
+    public function test_failover_over_limit()
+    {
         $pool = new SilentConnectionPool(self::$KS, NULL, 5, 4);
         $pool->fill();
         $stats = $pool->stats();
@@ -99,7 +106,8 @@ class ConnectionPoolTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($stats['recycled'], 0);
     }
 
-    public function test_recycle() {
+    public function test_recycle()
+    {
         $pool = new SilentConnectionPool(self::$KS, NULL, 5, 5, 5000, 5000, 10);
         $pool->fill();
         $cf = new ColumnFamily($pool, self::$CF);
@@ -120,7 +128,8 @@ class ConnectionPoolTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($stats['recycled'], 10);
     }
 
-    public function test_multiple_servers() {
+    public function test_multiple_servers()
+    {
         $servers = array('localhost:9160', '127.0.0.1:9160', '127.0.0.1');
         $pool = new SilentConnectionPool(self::$KS, $servers);
         $pool->fill();
@@ -133,7 +142,8 @@ class ConnectionPoolTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($stats['failed'], 0);
     }
 
-    public function test_initial_connection_failure() {
+    public function test_initial_connection_failure()
+    {
         $servers = array('localhost', 'foobar');
         $pool = new SilentConnectionPool(self::$KS, $servers);
         $pool->fill();

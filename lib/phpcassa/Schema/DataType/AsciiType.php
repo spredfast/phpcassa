@@ -6,4 +6,6 @@ namespace phpcassa\Schema\DataType;
  *
  * @package phpcassa\Schema\DataType
  */
-class AsciiType extends CassandraType { }
+class AsciiType extends CassandraType
+{
+}

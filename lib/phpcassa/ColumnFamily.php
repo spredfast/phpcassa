@@ -13,7 +13,8 @@ use cassandra\CounterColumn;
  *
  * @package phpcassa
  */
-class ColumnFamily extends AbstractColumnFamily {
+class ColumnFamily extends AbstractColumnFamily
+{
 
     /**
      * Increment or decrement a counter.
@@ -33,8 +34,10 @@ class ColumnFamily extends AbstractColumnFamily {
      * @param int $value the amount to adjust the counter by
      * @param ConsistencyLevel $consistency_level affects the guaranteed
      *        number of nodes that must respond before the operation returns
+     * @return mixed
      */
-    public function add($key, $column, $value=1, $consistency_level=null) {
+    public function add($key, $column, $value = 1, $consistency_level = null)
+    {
         $packed_key = $this->pack_key($key);
         $cp = $this->create_column_parent();
         $counter = new CounterColumn();

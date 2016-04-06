@@ -3,12 +3,11 @@ namespace phpcassa\Index;
 
 use cassandra\IndexOperator;
 
-use phpcassa\ColumnFamily;
-
 /**
  * @package phpcassa\Index
  */
-class IndexExpression extends \cassandra\IndexExpression {
+class IndexExpression extends \cassandra\IndexExpression
+{
 
     static protected $names_to_values = array(
         "EQ" => IndexOperator::EQ,
@@ -28,7 +27,8 @@ class IndexExpression extends \cassandra\IndexExpression {
      *        and the 'value' parameter.  Valid options include "EQ", "LT", "LTE",
      *        "GT", and "GTE". Defaults to testing for equality.
      */
-    public function __construct($column_name, $value, $op="EQ") {
+    public function __construct($column_name, $value, $op = "EQ")
+    {
         parent::__construct();
         $this->column_name = $column_name;
         $this->value = $value;

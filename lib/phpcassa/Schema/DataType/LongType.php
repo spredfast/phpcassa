@@ -6,9 +6,10 @@ namespace phpcassa\Schema\DataType;
  *
  * @package phpcassa\Schema\DataType
  */
-class LongType extends CassandraType {
+class LongType extends CassandraType
+{
 
-    public function pack($value, $is_name=null, $slice_end=null, $is_data=null)
+    public function pack($value, $is_name = null, $slice_end = null, $is_data = null)
     {
         // If we are on a 32bit architecture we have to explicitly deal with
         // 64-bit twos-complement arithmetic since PHP wants to treat all ints
@@ -17,7 +18,7 @@ class LongType extends CassandraType {
             $neg = $value < 0;
 
             if ($neg) {
-              $value *= -1;
+                $value *= -1;
             }
 
             $hi = (int)($value / 4294967296);
@@ -42,7 +43,7 @@ class LongType extends CassandraType {
         return $data;
     }
 
-    public function unpack($data, $is_name=null)
+    public function unpack($data, $is_name = null)
     {
         $arr = unpack('N2', $data);
 
@@ -53,7 +54,7 @@ class LongType extends CassandraType {
 
             $hi = $arr[1];
             $lo = $arr[2];
-            $isNeg = $hi  < 0;
+            $isNeg = $hi < 0;
 
             // Check for a negative
             if ($isNeg) {
@@ -96,9 +97,9 @@ class LongType extends CassandraType {
                 $arr[1] = $arr[1] & 0xffffffff;
                 $arr[1] = $arr[1] ^ 0xffffffff;
                 $arr[2] = $arr[2] ^ 0xffffffff;
-                $value = 0 - $arr[1]*4294967296 - $arr[2] - 1;
+                $value = 0 - $arr[1] * 4294967296 - $arr[2] - 1;
             } else {
-                $value = $arr[1]*4294967296 + $arr[2];
+                $value = $arr[1] * 4294967296 + $arr[2];
             }
         }
         return $value;

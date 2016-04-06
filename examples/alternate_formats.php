@@ -14,13 +14,13 @@
  *
  */
 
-require_once(__DIR__.'/../lib/autoload.php');
+require_once(__DIR__ . '/lib/autoload.php');
 
-use phpcassa\Connection\ConnectionPool;
 use phpcassa\ColumnFamily;
 use phpcassa\ColumnSlice;
-use phpcassa\SystemManager;
+use phpcassa\Connection\ConnectionPool;
 use phpcassa\Schema\StrategyClass;
+use phpcassa\SystemManager;
 use phpcassa\UUID;
 
 // Create a new keyspace and column family
@@ -161,4 +161,3 @@ $sys->drop_keyspace("Keyspace1");
 $pool->close();
 $sys->close();
 
-?>

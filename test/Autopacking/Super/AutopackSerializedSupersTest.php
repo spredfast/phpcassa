@@ -1,18 +1,19 @@
 <?php
-require_once(__DIR__.'/SuperBase.php');
+require_once(__DIR__ . '/SuperBase.php');
 
 use phpcassa\Connection\ConnectionPool;
-use phpcassa\SuperColumnFamily;
 use phpcassa\Schema\DataType;
+use phpcassa\SuperColumnFamily;
 use phpcassa\SystemManager;
-
 use phpcassa\UUID;
 
-class AutopackSerializedSupersTest extends SuperBase {
+class AutopackSerializedSupersTest extends SuperBase
+{
 
     protected $SERIALIZED = true;
 
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         parent::setUpBeforeClass();
 
         $sys = new SystemManager();
@@ -36,17 +37,18 @@ class AutopackSerializedSupersTest extends SuperBase {
         // $sys->create_column_family(self::$KS, 'SuperComposite', $cfattrs);
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->client = new ConnectionPool(self::$KS);
 
-        $this->cf_supfloat     = new SuperColumnFamily($this->client, 'SuperFloat');
-        $this->cf_supdouble    = new SuperColumnFamily($this->client, 'SuperDouble');
-        $this->cf_suptime      = new SuperColumnFamily($this->client, 'SuperTime');
-        $this->cf_suplex       = new SuperColumnFamily($this->client, 'SuperLex');
+        $this->cf_supfloat = new SuperColumnFamily($this->client, 'SuperFloat');
+        $this->cf_supdouble = new SuperColumnFamily($this->client, 'SuperDouble');
+        $this->cf_suptime = new SuperColumnFamily($this->client, 'SuperTime');
+        $this->cf_suplex = new SuperColumnFamily($this->client, 'SuperLex');
         // $this->cf_supcomposite = new SuperColumnFamily($this->client, 'SuperComposite');
 
         $this->cfs = array($this->cf_supfloat, $this->cf_supdouble, $this->cf_suptime,
-                           $this->cf_suplex); // $this->cf_supcomposite);
+            $this->cf_suplex); // $this->cf_supcomposite);
 
         $this->TIME1 = UUID::mint();
         $this->TIME2 = UUID::mint();
@@ -57,7 +59,8 @@ class AutopackSerializedSupersTest extends SuperBase {
         $this->LEX3 = UUID::import('cccccccccccccccccccccccccccccccc');
     }
 
-    protected function make_type_groups() {
+    protected function make_type_groups()
+    {
         $type_groups = array();
 
         $float_cols = array(1.25, 1.5, 1.75);

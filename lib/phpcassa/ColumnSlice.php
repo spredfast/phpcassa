@@ -9,7 +9,8 @@ use cassandra\SliceRange;
  *
  * @package phpcassa
  */
-class ColumnSlice extends SliceRange {
+class ColumnSlice extends SliceRange
+{
 
     /** The default limit to the number of columns retrieved in queries. */
     const DEFAULT_COLUMN_COUNT = 100; // default max # of columns for get()
@@ -29,8 +30,9 @@ class ColumnSlice extends SliceRange {
      * @param bool $reversed whether or not to reverse the column
      *        slice, going backwards from $start to $finish.
      */
-    function __construct($start="", $finish="",
-            $count=self::DEFAULT_COLUMN_COUNT, $reversed=False) {
+    function __construct($start = "", $finish = "",
+                         $count = self::DEFAULT_COLUMN_COUNT, $reversed = False)
+    {
         parent::__construct();
         $this->start = $start;
         $this->finish = $finish;

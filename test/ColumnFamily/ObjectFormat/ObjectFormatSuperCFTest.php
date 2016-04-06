@@ -1,25 +1,25 @@
 <?php
 
-use phpcassa\Connection\ConnectionPool;
 use phpcassa\ColumnFamily;
-use phpcassa\SuperColumnFamily;
+use phpcassa\Connection\ConnectionPool;
 use phpcassa\Schema\DataType;
+use phpcassa\SuperColumnFamily;
 use phpcassa\SystemManager;
-
 use phpcassa\UUID;
 
-class ObjectFormatSuperCFTest extends PHPUnit_Framework_TestCase {
+class ObjectFormatSuperCFTest extends PHPUnit_Framework_TestCase
+{
 
-    private static $KEYS = array('key1', 'key2', 'key3');
-    private static $KS = "TestColumnFamily";
     protected static $CF = "Super1";
-
     protected static $cfattrs = array(
         "column_type" => "Super",
         "subcomparator_type" => "TimeUUIDType"
     );
+    private static $KEYS = array('key1', 'key2', 'key3');
+    private static $KS = "TestColumnFamily";
 
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         try {
             $sys = new SystemManager();
 
@@ -34,21 +34,23 @@ class ObjectFormatSuperCFTest extends PHPUnit_Framework_TestCase {
             }
             $sys->close();
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             print($e);
             throw $e;
         }
     }
 
-    public static function tearDownAfterClass() {
+    public static function tearDownAfterClass()
+    {
         $sys = new SystemManager();
         $sys->drop_keyspace(self::$KS);
         $sys->close();
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->subcols = array(array(UUID::uuid1(), 'val1'),
-                               array(UUID::uuid1(), 'val2'));
+            array(UUID::uuid1(), 'val2'));
 
         $this->pool = new ConnectionPool(self::$KS);
         $this->cf = new SuperColumnFamily($this->pool, self::$CF);
@@ -56,29 +58,26 @@ class ObjectFormatSuperCFTest extends PHPUnit_Framework_TestCase {
         $this->cf->return_format = ColumnFamily::OBJECT_FORMAT;
     }
 
-    public function tearDown() {
+    public function tearDown()
+    {
         if ($this->cf) {
-            foreach(self::$KEYS as $key)
+            foreach (self::$KEYS as $key)
                 $this->cf->remove($key);
         }
         $this->pool->dispose();
     }
 
-    public function sort_rows($a, $b) {
+    public function sort_rows($a, $b)
+    {
         if ($a[0] === $b[0])
             return 0;
         return $a[0] < $b[0] ? -1 : 1;
     }
 
-    protected function assertMatches($expected, $col) {
-        list($name, $value) = $expected;
-        $this->assertEquals($col->name, $name);
-        $this->assertEquals($col->value, $value);
-    }
-
-    public function test_get() {
+    public function test_get()
+    {
         $cols = array(array('super1', $this->subcols),
-                      array('super2', $this->subcols));
+            array('super2', $this->subcols));
         $this->cf->insert(self::$KEYS[0], $cols);
         $result = $this->cf->get(self::$KEYS[0]);
 
@@ -91,7 +90,15 @@ class ObjectFormatSuperCFTest extends PHPUnit_Framework_TestCase {
         $this->assertMatches($this->subcols[1], $first_super->columns[1]);
     }
 
-    public function test_get_super_column() {
+    protected function assertMatches($expected, $col)
+    {
+        list($name, $value) = $expected;
+        $this->assertEquals($col->name, $name);
+        $this->assertEquals($col->value, $value);
+    }
+
+    public function test_get_super_column()
+    {
         $cols = array(array('super1', $this->subcols));
         $this->cf->insert(self::$KEYS[0], $cols);
         $res = $this->cf->get_super_column(self::$KEYS[0], 'super1');
@@ -101,9 +108,10 @@ class ObjectFormatSuperCFTest extends PHPUnit_Framework_TestCase {
         $this->assertMatches($this->subcols[1], $res[1]);
     }
 
-    public function test_multiget() {
+    public function test_multiget()
+    {
         $cols = array(array('super1', $this->subcols),
-                      array('super2', $this->subcols));
+            array('super2', $this->subcols));
         $this->cf->insert(self::$KEYS[0], $cols);
         $this->cf->insert(self::$KEYS[1], $cols);
         $result = $this->cf->multiget(array(self::$KEYS[0], self::$KEYS[1]));
@@ -121,7 +129,8 @@ class ObjectFormatSuperCFTest extends PHPUnit_Framework_TestCase {
         $this->assertMatches($this->subcols[1], $first_super->columns[1]);
     }
 
-    public function test_multiget_super_column() {
+    public function test_multiget_super_column()
+    {
         $cols = array(array('super1', $this->subcols));
         $this->cf->insert(self::$KEYS[0], $cols);
         $this->cf->insert(self::$KEYS[1], $cols);
@@ -137,12 +146,13 @@ class ObjectFormatSuperCFTest extends PHPUnit_Framework_TestCase {
         $this->assertMatches($this->subcols[1], $first_subcols[1]);
     }
 
-    public function test_get_range() {
+    public function test_get_range()
+    {
         $cols = array(array('super1', $this->subcols),
-                      array('super2', $this->subcols));
+            array('super2', $this->subcols));
         $rows = array(array(self::$KEYS[0], $cols),
-                      array(self::$KEYS[1], $cols),
-                      array(self::$KEYS[2], $cols));
+            array(self::$KEYS[1], $cols),
+            array(self::$KEYS[2], $cols));
         $this->cf->batch_insert($rows);
 
         $result = iterator_to_array($this->cf->get_range());
@@ -158,11 +168,12 @@ class ObjectFormatSuperCFTest extends PHPUnit_Framework_TestCase {
         $this->assertMatches($this->subcols[1], $first_super->columns[1]);
     }
 
-    public function test_get_super_column_range() {
+    public function test_get_super_column_range()
+    {
         $cols = array(array('super1', $this->subcols));
         $rows = array(array(self::$KEYS[0], $cols),
-                      array(self::$KEYS[1], $cols),
-                      array(self::$KEYS[2], $cols));
+            array(self::$KEYS[1], $cols),
+            array(self::$KEYS[2], $cols));
         $this->cf->batch_insert($rows);
 
         $result = $this->cf->get_super_column_range('super1');
